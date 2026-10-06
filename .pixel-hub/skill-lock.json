@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "skills": {
+    "implement-to-pixel": {
+      "source": "bitbucket:mid-kelola-indonesia/pixel-hub",
+      "ref": "main",
+      "skillVersion": "2026.6.8",
+      "skillPath": "skills/implement-to-pixel/SKILL.md",
+      "computedHash": "3a31ba4a3f10846441bf9240f3c21512d86a5a15bfeefc68ed89f304d8b41071"
+    },
+    "mekari-taste": {
+      "source": "bitbucket:mid-kelola-indonesia/pixel-hub",
+      "ref": "main",
+      "skillVersion": "2026.6.8",
+      "skillPath": "skills/mekari-taste/SKILL.md",
+      "computedHash": "d8c91994966fcc70bf271f5b0f9ee1af5d88bee78f62e75a3fb32cc9358c19d8"
+    },
+    "pixel": {
+      "source": "bitbucket:mid-kelola-indonesia/pixel-hub",
+      "ref": "main",
+      "skillVersion": "2026.6.8",
+      "skillPath": "skills/pixel/SKILL.md",
+      "computedHash": "c90841b39c6b4eac24edd461e46b9a12d68d2872878d5bf65aa694fdb71a1a24"
+    }
+  },
+  "lastSelectedAgents": ["claude-code"]
+}
