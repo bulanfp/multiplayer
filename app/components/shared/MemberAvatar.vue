@@ -37,8 +37,8 @@ import type { Actor } from "~/data/types";
 interface MemberAvatarProps {
   /** Person or agent to show */
   actor: Actor;
-  /** xs 20px · sm 24px · md 32px · lg 36px · xl 64px (empty states) */
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  /** xxs 16px (paired faces) · xs 20px · sm 24px · md 32px · lg 36px · xl 64px (empty states) */
+  size?: "xxs" | "xs" | "sm" | "md" | "lg" | "xl";
 }
 
 const props = withDefaults(defineProps<MemberAvatarProps>(), { size: "md" });
@@ -49,6 +49,7 @@ const person = computed(() =>
 );
 
 const SIZES = {
+  "&[data-size=xxs]": { w: "4", h: "4", fontSize: "7px" },
   "&[data-size=xs]": { w: "20px", h: "20px", fontSize: "9px" },
   "&[data-size=sm]": { w: "6", h: "6", fontSize: "10px" },
   "&[data-size=md]": { w: "8", h: "8", fontSize: "xs" },
@@ -81,6 +82,7 @@ const agentTileClass = css({
 // MpAvatar's own md is 24px, so md is pinned to 32px to match agents.
 const personClass = css({
   flexShrink: "0",
+  "&[data-size=xxs]": { w: "4 !important", h: "4 !important", fontSize: "7px !important" },
   "&[data-size=xs]": { w: "20px !important", h: "20px !important", fontSize: "9px !important" },
   "&[data-size=sm]": { w: "6 !important", h: "6 !important", fontSize: "10px !important" },
   "&[data-size=md]": { w: "8 !important", h: "8 !important", fontSize: "xs !important" },

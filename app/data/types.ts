@@ -99,6 +99,11 @@ export interface Conversation {
   createdAt: string;
   /** When you pinned a group; pinned groups lead the sidebar's groups, oldest pin first */
   pinnedAt?: string;
+  /**
+   * A group started from New chat by picking people and agents, without a name: it's titled
+   * after its members and shows their faces instead of an emoji until someone names it.
+   */
+  isUnnamed?: boolean;
 }
 
 export interface Mention {

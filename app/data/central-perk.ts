@@ -2,11 +2,12 @@ import { createConversationHelpers, outputId, type WorkspaceSeed } from "~/data/
 import { dayAt, daysFromNow, minutesAgo } from "~/data/time";
 
 // Mock content: PT Central Perk Indonesia's marketing team launching the limited Holiday Blend.
-// One shared space, no projects. Groups are workstreams (Airene is in every one). Agent chats
-// are your own private threads, several per agent, and an agent can bring others in to help.
+// One shared space, no projects. Groups are workstreams (Airene is in every one); a few are
+// unnamed, started from New chat by picking people. Agent chats are your own private threads,
+// several per agent, and an agent can bring others in to help.
 
 const WORKSPACE_ID = "central-perk";
-const { channel, agentChat } = createConversationHelpers(WORKSPACE_ID, "cp");
+const { channel, unnamedGroup, agentChat } = createConversationHelpers(WORKSPACE_ID, "cp");
 
 const TEAM = ["rizal", "maya", "kevin", "nadia", "dewi", "fajar"];
 
@@ -127,6 +128,20 @@ export const CENTRAL_PERK: WorkspaceSeed = {
       ["maya", "kevin", "dewi"],
       { ids: [], addedBy: "maya" },
       dayAt(15, "09:30")
+    ),
+    // Started from New chat without a name, so they're titled after who's in them. Picking
+    // just Maya in New chat opens the first one instead of starting another.
+    unnamedGroup(
+      "group-creator-offers",
+      ["maya", "rizal"],
+      { ids: [], addedBy: "maya" },
+      dayAt(1, "15:40")
+    ),
+    unnamedGroup(
+      "group-carousel-shoot",
+      ["nadia", "rizal", "kevin"],
+      { ids: ["social-planner"], addedBy: "nadia" },
+      dayAt(2, "09:10")
     ),
 
     // ─── Your agent chats: private threads, several per agent ───────────────
@@ -582,6 +597,49 @@ export const CENTRAL_PERK: WorkspaceSeed = {
         text: "Senopati 2 × 2.4 m, Kemang 3 × 2.4 m, Dago 2 × 2.4 m."
       },
       { from: "dewi", at: dayAt(1, "10:30"), text: "Thanks, on it." }
+    ],
+
+    // ─── Unnamed groups ─────────────────────────────────────────────────────
+    "cp-group-creator-offers": [
+      { at: dayAt(1, "15:40"), text: "Maya Putri started this group with Rizal Candra and Airene" },
+      {
+        from: "maya",
+        at: dayAt(1, "15:40"),
+        text: "The creator offers come to IDR 64 million, so legal has to review them before Kevin sends anything."
+      },
+      {
+        from: "rizal",
+        at: dayAt(1, "15:46"),
+        text: "@Airene can you list the offers for legal?"
+      },
+      {
+        from: "airene",
+        at: dayAt(1, "15:47"),
+        text: "Here they are, @Rizal Candra: Ngopi di Kota IDR 24 million, Rina Roams IDR 22 million and Sarapan Sore IDR 18 million, all for week 2. The other two creators haven't sent rates yet."
+      },
+      { from: "maya", at: dayAt(1, "15:52"), text: "Perfect, sending it to legal now." }
+    ],
+    "cp-group-carousel-shoot": [
+      {
+        at: dayAt(2, "09:10"),
+        text: "Nadia Rahma started this group with Rizal Candra, Kevin Tan, Airene and Social media planner"
+      },
+      {
+        from: "nadia",
+        at: dayAt(2, "09:10"),
+        text: "The barista carousel shoot moved to Thursday 09:00 at the Senopati store."
+      },
+      {
+        from: "kevin",
+        at: dayAt(2, "09:18"),
+        text: "@Social media planner does the carousel still go out on Wednesday?"
+      },
+      {
+        from: "social-planner",
+        at: dayAt(2, "09:19"),
+        text: "Not anymore, @Kevin Tan. I'll move it to Friday at 12:00 and bring the creator posts forward to Thursday."
+      },
+      { from: "rizal", at: dayAt(2, "09:30"), text: "Works for me. Thanks, both." }
     ],
 
     // ─── Your agent chats ───────────────────────────────────────────────────

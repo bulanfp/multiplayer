@@ -84,6 +84,12 @@ export function formatAgo(iso: string): string {
   return `${Math.floor(days / 30)}mo ago`;
 }
 
+/** Names in a sentence: "Maya Putri, Kevin Tan and Airene". */
+export function formatList(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
 /** "Rp969.144", the way Indonesian finance screens show rupiah. */
 export function formatRupiah(amount: number): string {
   return `Rp${Math.round(amount).toLocaleString("id-ID")}`;

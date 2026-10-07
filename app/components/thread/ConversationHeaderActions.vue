@@ -1,30 +1,49 @@
 <template>
-  <button
-    type="button"
-    :class="membersButtonClass"
-    :data-active="isMembersOpen || undefined"
-    :aria-label="`${total} members. ${isMembersOpen ? 'Hide' : 'Show'} member list`"
-    :aria-pressed="isMembersOpen"
-    @click="emit('toggleMembers')"
-  >
-    <span :class="stackClass">
-      <span
-        v-for="actor in previewActors"
-        :key="`${actor.kind}-${actor.id}`"
-        :class="faceClass"
-        :data-kind="actor.kind"
-      >
-        <MemberAvatar :actor="actor" size="sm" />
+  <div :class="rootClass">
+    <!-- Members can name an unnamed group, or rename any group -->
+    <MpTooltip
+      v-if="isMember(conversation)"
+      id="rename-group-tooltip"
+      :label="renameLabel"
+      use-portal
+    >
+      <MpButton
+        is-rounded
+        variant="ghost"
+        left-icon="edit"
+        :aria-label="renameLabel"
+        @click="emit('rename')"
+      />
+    </MpTooltip>
+
+    <button
+      type="button"
+      :class="membersButtonClass"
+      :data-active="isMembersOpen || undefined"
+      :aria-label="`${total} members. ${isMembersOpen ? 'Hide' : 'Show'} member list`"
+      :aria-pressed="isMembersOpen"
+      @click="emit('toggleMembers')"
+    >
+      <span :class="stackClass">
+        <span
+          v-for="actor in previewActors"
+          :key="`${actor.kind}-${actor.id}`"
+          :class="faceClass"
+          :data-kind="actor.kind"
+        >
+          <MemberAvatar :actor="actor" size="sm" />
+        </span>
       </span>
-    </span>
-    <MpText color="text.secondary">{{ total }}</MpText>
-  </button>
+      <MpText color="text.secondary">{{ total }}</MpText>
+    </button>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { css, MpText } from "@mekari/pixel3";
+import { css, MpButton, MpText, MpTooltip } from "@mekari/pixel3";
 import MemberAvatar from "~/components/shared/MemberAvatar.vue";
+import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 import type { Actor, Conversation } from "~/data/types";
 
 interface ConversationHeaderActionsProps {
@@ -33,7 +52,13 @@ interface ConversationHeaderActionsProps {
 }
 
 const props = defineProps<ConversationHeaderActionsProps>();
-const emit = defineEmits<{ toggleMembers: [] }>();
+const emit = defineEmits<{ toggleMembers: []; rename: [] }>();
+
+const { isMember } = useWorkspaceStore();
+
+const renameLabel = computed(() =>
+  props.conversation.isUnnamed ? "Name this group" : "Rename group"
+);
 
 const total = computed(
   () => props.conversation.memberIds.length + props.conversation.agentIds.length
@@ -44,6 +69,8 @@ const previewActors = computed<Actor[]>(() => [
   ...props.conversation.memberIds.slice(0, 3).map((id) => ({ kind: "person" as const, id })),
   ...props.conversation.agentIds.slice(0, 2).map((id) => ({ kind: "agent" as const, id }))
 ]);
+
+const rootClass = css({ display: "flex", alignItems: "center", gap: "2" });
 
 // A pill: faces on the left, a quiet count on the right.
 const membersButtonClass = css({

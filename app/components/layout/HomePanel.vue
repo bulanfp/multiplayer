@@ -1,8 +1,9 @@
 <template>
   <div v-if="workspace" :class="panelClass">
-    <!-- ═════ Header: Chats, and + to chat with an agent or create a group ═════ -->
+    <!-- ═════ Header: Chats, and + for New chat: pick agents or people ═════ -->
     <div :class="headerClass">
       <SectionLabel>Chats</SectionLabel>
+      <!-- Not kept alive, so the picker starts empty every time it opens -->
       <MpPopover
         id="new-chat-menu"
         v-slot="{ onClosePopover }"
@@ -11,23 +12,14 @@
         :is-keep-alive="false"
       >
         <MpPopoverTrigger>
-          <MpButton variant="ghost" size="sm" left-icon="add" aria-label="New chat or group" />
+          <MpButton variant="ghost" size="sm" left-icon="add" aria-label="New chat" />
         </MpPopoverTrigger>
-        <MpPopoverContent :class="menuClass">
-          <MpPopoverList :class="menuListClass">
-            <MpPopoverListItem @click="openModal('new-chat', onClosePopover)">
-              <MpFlex alignItems="center" gap="3">
-                <MpIcon name="chat" size="sm" />
-                <MpText>Chat with an agent</MpText>
-              </MpFlex>
-            </MpPopoverListItem>
-            <MpPopoverListItem @click="openModal('create-channel', onClosePopover)">
-              <MpFlex alignItems="center" gap="3">
-                <MpIcon name="people" size="sm" />
-                <MpText>Create group</MpText>
-              </MpFlex>
-            </MpPopoverListItem>
-          </MpPopoverList>
+        <MpPopoverContent>
+          <NewChatPicker
+            :workspace="workspace"
+            @done="onClosePopover"
+            @create-group="openCreateGroup($event, onClosePopover)"
+          />
         </MpPopoverContent>
       </MpPopover>
     </div>
@@ -99,23 +91,13 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import {
-  css,
-  MpButton,
-  MpFlex,
-  MpIcon,
-  MpPopover,
-  MpPopoverContent,
-  MpPopoverList,
-  MpPopoverListItem,
-  MpPopoverTrigger,
-  MpText
-} from "@mekari/pixel3";
+import { css, MpButton, MpPopover, MpPopoverContent, MpPopoverTrigger } from "@mekari/pixel3";
 import AgentMenuItem from "~/components/layout/AgentMenuItem.vue";
 import ConversationMenuItem from "~/components/layout/ConversationMenuItem.vue";
 import SectionLabel from "~/components/layout/SectionLabel.vue";
 import SidebarSection from "~/components/layout/SidebarSection.vue";
-import { useAppModals, type AppModal } from "~/composables/useAppModals";
+import NewChatPicker from "~/components/workspace/NewChatPicker.vue";
+import { useAppModals, type GroupPicks } from "~/composables/useAppModals";
 import { useChatStore } from "~/composables/useChatStore";
 import { useCurrentWorkspace } from "~/composables/useCurrentWorkspace";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
@@ -165,9 +147,10 @@ function isAgentTucked(agentId: string, isOpen: boolean): boolean {
   return agentUnreadCount(workspace.value.id, agentId) === 0 && !isOpenChat;
 }
 
-function openModal(modal: AppModal, close: () => void) {
+/** Create a group, with the people and agents already picked in New chat ticked. */
+function openCreateGroup(picks: GroupPicks, close: () => void) {
   close();
-  open(modal);
+  open("create-channel", picks);
 }
 
 const panelClass = css({ display: "flex", flexDirection: "column", gap: "4", px: "1.5", pb: "6" });
@@ -183,12 +166,6 @@ const headerClass = css({
   flexShrink: "0",
   mb: "-6"
 });
-
-// The menu reads as a short list of what you can start.
-const menuClass = css({ w: "220px" });
-
-// Pixel's list pads 12px above and 8px below; 4px on both keeps the menu compact and even.
-const menuListClass = css({ py: "1" });
 
 const listClass = css({ display: "flex", flexDirection: "column", mt: "1" });
 

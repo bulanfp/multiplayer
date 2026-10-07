@@ -87,15 +87,6 @@
                           {{ agent.role }}
                         </MpText>
                       </MpFlex>
-                      <MpBadge
-                        v-if="agent.id === AIRENE_ID"
-                        for="tableStatus"
-                        type="announcement"
-                        size="sm"
-                        :class="css({ flexShrink: '0' })"
-                      >
-                        Always in
-                      </MpBadge>
                     </MpFlex>
                   </MpCheckbox>
                 </li>
@@ -117,11 +108,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   css,
   toast,
-  MpBadge,
   MpButton,
   MpButtonGroup,
   MpCheckbox,
@@ -142,6 +132,7 @@ import {
 } from "@mekari/pixel3";
 import EmojiPickerTile from "~/components/shared/EmojiPickerTile.vue";
 import MemberAvatar from "~/components/shared/MemberAvatar.vue";
+import type { GroupPicks } from "~/composables/useAppModals";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 import { AIRENE_ID, getAgent } from "~/data/agents";
 import { CURRENT_USER_ID, getPerson } from "~/data/people";
@@ -152,6 +143,8 @@ import { conversationPath } from "~/utils/paths";
 interface CreateChannelModalProps {
   isOpen: boolean;
   workspace: Workspace;
+  /** People and agents already picked in New chat, ticked when it opens */
+  picks?: GroupPicks | null;
 }
 
 const props = defineProps<CreateChannelModalProps>();
@@ -182,6 +175,19 @@ const agents = computed(() =>
   props.workspace.agentIds
     .map((id) => getAgent(id))
     .filter((agent): agent is Agent => agent !== undefined)
+);
+
+// From New chat: whoever you'd picked there starts ticked, beside you and Airene.
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (!isOpen || !props.picks) return;
+    personIds.value = [
+      CURRENT_USER_ID,
+      ...props.picks.personIds.filter((id) => id !== CURRENT_USER_ID)
+    ];
+    agentIds.value = [AIRENE_ID, ...props.picks.agentIds.filter((id) => id !== AIRENE_ID)];
+  }
 );
 
 function reset() {

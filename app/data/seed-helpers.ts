@@ -1,6 +1,7 @@
 import { AIRENE_ID } from "~/data/agents";
 import { CURRENT_USER_ID } from "~/data/people";
 import type { ActivityItem, Conversation, LibraryFile, Todo, Workspace } from "~/data/types";
+import { unnamedGroupTitle } from "~/utils/group-name";
 
 // Shapes and helpers for writing the mock content in one readable file.
 
@@ -68,6 +69,32 @@ export function createConversationHelpers(workspaceId: string, prefix: string) {
   }
 
   /**
+   * A group someone started from New chat without naming it: titled after its members, like
+   * "Maya, Airene", and shown with their faces. Airene is always in it.
+   */
+  function unnamedGroup(
+    slug: string,
+    memberIds: string[],
+    agents: { ids: string[]; addedBy: string },
+    createdAt: string
+  ): Conversation {
+    const agentIds = [AIRENE_ID, ...agents.ids.filter((id) => id !== AIRENE_ID)];
+    return {
+      id: `${prefix}-${slug}`,
+      workspaceId,
+      kind: "channel",
+      slug,
+      name: unnamedGroupTitle(memberIds, agentIds),
+      description: "",
+      memberIds,
+      agentIds,
+      agentAddedBy: Object.fromEntries(agentIds.map((id) => [id, agents.addedBy])),
+      createdAt,
+      isUnnamed: true
+    };
+  }
+
+  /**
    * One of your private chats with an agent, titled like a thread. You can have many with
    * the same agent; they're listed on that agent's chat page.
    */
@@ -90,5 +117,5 @@ export function createConversationHelpers(workspaceId: string, prefix: string) {
     };
   }
 
-  return { channel, agentChat };
+  return { channel, unnamedGroup, agentChat };
 }

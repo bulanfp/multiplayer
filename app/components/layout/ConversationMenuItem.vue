@@ -1,7 +1,7 @@
 <template>
-  <!-- A sidebar row for a group. On hover or keyboard focus, its emoji turns into a pin
-       button; the button sits beside the link, not inside it. A click leaves focus on the link,
-       so only :focus-visible counts, or an opened row would keep it. -->
+  <!-- A sidebar row for a group. On hover or keyboard focus, its emoji (or an unnamed group's
+       faces) turns into a pin button; the button sits beside the link, not inside it. A click
+       leaves focus on the link, so only :focus-visible counts, or an opened row would keep it. -->
   <div class="group" :class="rootClass">
     <SideMenuItem
       :to="conversationPath(conversation.workspaceId, conversation.slug)"
@@ -10,7 +10,12 @@
     >
       <template #leading>
         <span :class="leadingClass" data-pin-swap>
-          <span :class="emojiClass" aria-hidden="true">{{ conversation.emoji }}</span>
+          <GroupFaces
+            v-if="conversation.isUnnamed"
+            :person-ids="conversation.memberIds"
+            :agent-ids="conversation.agentIds"
+          />
+          <span v-else :class="emojiClass" aria-hidden="true">{{ conversation.emoji }}</span>
         </span>
       </template>
     </SideMenuItem>
@@ -33,6 +38,7 @@
 import { computed } from "vue";
 import { css, MpIcon, MpTooltip } from "@mekari/pixel3";
 import SideMenuItem from "~/components/layout/SideMenuItem.vue";
+import GroupFaces from "~/components/shared/GroupFaces.vue";
 import { useChatStore } from "~/composables/useChatStore";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 import type { Conversation } from "~/data/types";

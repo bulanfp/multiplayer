@@ -12,18 +12,25 @@
     - @mention list (agents first), "<agent> is writing…", scripted reply with output card
     - Output canvas (versions, copy, close) and members panel, one at a time
     - Not a member yet: Join bar instead of the composer
+    - Unnamed group (started from New chat): its members' faces and names as the title, and
+      "Name this group" in the intro; the header's pencil names or renames any group
     - Unknown group: in-shell not-found message
 -->
 <template>
   <div :class="pageClass">
     <!-- ═════ A group ═════ -->
     <template v-if="workspace && group">
-      <PageHeader :title="label" :subtitle="group.description">
+      <!-- Title only: the description shows in the intro at the top of the thread -->
+      <PageHeader :title="label">
+        <template v-if="group.isUnnamed" #leading>
+          <GroupFaces :person-ids="group.memberIds" :agent-ids="group.agentIds" size="lg" />
+        </template>
         <template #actions>
           <ConversationHeaderActions
             :conversation="group"
             :is-members-open="panel?.kind === 'members'"
             @toggle-members="toggleMembers"
+            @rename="isRenameOpen = true"
           />
         </template>
       </PageHeader>
@@ -45,7 +52,22 @@
           >
             <!-- What the group is for, and how to bring an agent in -->
             <template #intro>
-              <div :class="introClass">
+              <div v-if="group.isUnnamed" :class="introClass">
+                <MpText size="h2">{{ title }}</MpText>
+                <MpText color="text.secondary">
+                  A group with {{ memberList }}. Mention an agent with @ and it will reply here.
+                </MpText>
+                <MpButton
+                  v-if="isMember(group)"
+                  is-rounded
+                  variant="textLink"
+                  :class="nameLinkClass"
+                  @click="isRenameOpen = true"
+                >
+                  Name this group
+                </MpButton>
+              </div>
+              <div v-else :class="introClass">
                 <MpText size="h2">Welcome to {{ label }}</MpText>
                 <MpText color="text.secondary">{{ introText }}</MpText>
               </div>
@@ -81,6 +103,11 @@
         :workspace="workspace"
         @close="isAddOpen = false"
       />
+      <RenameGroupModal
+        :is-open="isRenameOpen"
+        :conversation="group"
+        @close="isRenameOpen = false"
+      />
     </template>
 
     <template v-else>
@@ -96,22 +123,26 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { css, toast, MpText } from "@mekari/pixel3";
+import { css, toast, MpButton, MpText } from "@mekari/pixel3";
 import PageContent from "~/components/layout/PageContent.vue";
 import PageHeader from "~/components/layout/PageHeader.vue";
 import SidePanelTransition from "~/components/layout/SidePanelTransition.vue";
+import GroupFaces from "~/components/shared/GroupFaces.vue";
 import AddMembersModal from "~/components/thread/AddMembersModal.vue";
 import ConversationHeaderActions from "~/components/thread/ConversationHeaderActions.vue";
 import ConversationMembersPanel from "~/components/thread/ConversationMembersPanel.vue";
 import JoinChannelBar from "~/components/thread/JoinChannelBar.vue";
 import OutputCanvas from "~/components/thread/OutputCanvas.vue";
+import RenameGroupModal from "~/components/thread/RenameGroupModal.vue";
 import ThreadView from "~/components/thread/ThreadView.vue";
 import { useChatStore } from "~/composables/useChatStore";
 import { useCurrentWorkspace } from "~/composables/useCurrentWorkspace";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
-import { CURRENT_USER_ID } from "~/data/people";
+import { AIRENE_ID, getAgent } from "~/data/agents";
+import { CURRENT_USER_ID, getPerson } from "~/data/people";
 import type { MessageDraft } from "~/data/types";
 import { toMentionables } from "~/utils/directory";
+import { formatList } from "~/utils/format";
 
 type Panel = { kind: "members" } | { kind: "output"; outputId: string; version: number };
 
@@ -123,6 +154,7 @@ const { sendMessage, pickOption, setActiveThread, leaveThread, getOutput } = use
 
 const panel = ref<Panel | null>(null);
 const isAddOpen = ref(false);
+const isRenameOpen = ref(false);
 
 const group = computed(() =>
   workspace.value
@@ -142,6 +174,20 @@ const mentionables = computed(() =>
       )
     : []
 );
+
+/** Everyone in an unnamed group but you, full names, Airene last: "Maya Putri and Airene". */
+const memberList = computed(() => {
+  if (!group.value) return "";
+  const agentIds = [...group.value.agentIds].sort(
+    (a, b) => Number(a === AIRENE_ID) - Number(b === AIRENE_ID)
+  );
+  return formatList([
+    ...group.value.memberIds
+      .filter((id) => id !== CURRENT_USER_ID)
+      .map((id) => getPerson(id)?.name ?? id),
+    ...agentIds.map((id) => getAgent(id)?.name ?? id)
+  ]);
+});
 
 /** The group intro: what it's for and how to bring an agent in. Airene is always here. */
 const introText = computed(() => {
@@ -212,4 +258,7 @@ const pageClass = css({ display: "flex", flexDirection: "column", flex: "1", min
 const workspaceClass = css({ display: "flex", h: "full", overflow: "hidden" });
 
 const introClass = css({ display: "flex", flexDirection: "column", gap: "1", px: "6", pb: "2" });
+
+// A text link under the intro, so it sits at the start of the line like the text above.
+const nameLinkClass = css({ alignSelf: "flex-start" });
 </script>

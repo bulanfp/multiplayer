@@ -96,6 +96,11 @@
                 <span v-if="item.emoji" :class="emojiClass" aria-hidden="true">
                   {{ item.emoji }}
                 </span>
+                <GroupFaces
+                  v-else-if="item.faces"
+                  :person-ids="item.faces.personIds"
+                  :agent-ids="item.faces.agentIds"
+                />
                 <MemberAvatar v-else-if="item.actor" :actor="item.actor" size="sm" />
                 <MpIcon
                   v-else-if="item.icon"
@@ -159,6 +164,7 @@ import {
   MpText,
   type IconName
 } from "@mekari/pixel3";
+import GroupFaces from "~/components/shared/GroupFaces.vue";
 import MemberAvatar from "~/components/shared/MemberAvatar.vue";
 import { useChatStore } from "~/composables/useChatStore";
 import { useCurrentWorkspace } from "~/composables/useCurrentWorkspace";
@@ -182,6 +188,8 @@ interface SearchResult {
   caption?: string;
   /** A group's emoji */
   emoji?: string;
+  /** An unnamed group's members, shown as two faces instead of an emoji */
+  faces?: { personIds: string[]; agentIds: string[] };
   /** A person's or agent's avatar */
   actor?: Actor;
   icon?: IconName;
@@ -237,6 +245,7 @@ const candidates = computed<SearchSection[]>(() => {
       name: group.name,
       caption: isMember(group) ? group.description : "Not joined",
       emoji: group.emoji,
+      faces: group.isUnnamed ? { personIds: group.memberIds, agentIds: group.agentIds } : undefined,
       open: () => navigateTo(conversationPath(project.id, group.slug))
     }));
 

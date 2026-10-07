@@ -10,6 +10,20 @@ export function conversationPath(workspaceId: string, slug: string): string {
   return `/w/${workspaceId}/c/${slug}`;
 }
 
+/** The page for a group you're about to start; no group can take this slug. */
+export const NEW_GROUP_SLUG = "new";
+
+/**
+ * A group with these people and agents, started from New chat. It's only saved when you
+ * send the first message; Airene joins it whether or not she's listed.
+ */
+export function newGroupRoute(workspaceId: string, personIds: string[], agentIds: string[]) {
+  const query: Record<string, string> = {};
+  if (personIds.length) query.people = personIds.join(",");
+  if (agentIds.length) query.agents = agentIds.join(",");
+  return { path: conversationPath(workspaceId, NEW_GROUP_SLUG), query };
+}
+
 /** An agent's chat page: one of your chats with it, or a new one when there's no slug. */
 export function agentChatPath(workspaceId: string, agentId: string, slug?: string): string {
   const base = `/w/${workspaceId}/chat/${agentId}`;

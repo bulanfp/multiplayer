@@ -4,10 +4,11 @@ import { CURRENT_USER_ID, getPerson } from "~/data/people";
 import { SEED } from "~/data/seed";
 import type { Agent, Conversation, MessageDraft, Workspace } from "~/data/types";
 import { useChatStore } from "~/composables/useChatStore";
-import { toSlug } from "~/utils/group-name";
+import { formatList } from "~/utils/format";
+import { toSlug, unnamedGroupTitle } from "~/utils/group-name";
 import { createId } from "~/utils/ids";
 import { withoutMentions } from "~/utils/mentions";
-import { agentChatPath } from "~/utils/paths";
+import { agentChatPath, NEW_GROUP_SLUG } from "~/utils/paths";
 
 const state = reactive({
   workspaces: structuredClone(SEED.workspaces) as Workspace[],
@@ -18,9 +19,12 @@ const { postSystemMessage, introduceAgents, unreadCount, lastMessageAt } = useCh
 
 const ME = getPerson(CURRENT_USER_ID)?.name ?? "You";
 
-function listNames(names: string[]): string {
-  if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`;
+/** Full names for system messages: people first, then agents. */
+function memberNames(personIds: string[], agentIds: string[]): string[] {
+  return [
+    ...personIds.map((id) => getPerson(id)?.name ?? id),
+    ...agentIds.map((id) => getAgent(id)?.name ?? id)
+  ];
 }
 
 // ─── Getters ────────────────────────────────────────────────────────────────
@@ -67,11 +71,16 @@ function isMember(conversation: Conversation): boolean {
   return conversation.memberIds.includes(CURRENT_USER_ID);
 }
 
-/** Every group, by name. */
-function channelsIn(workspaceId: string): Conversation[] {
+/** Every group, by name, including unnamed groups you're not in. */
+function allChannelsIn(workspaceId: string): Conversation[] {
   return state.conversations
     .filter((item) => item.workspaceId === workspaceId && item.kind === "channel")
     .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** The groups you can see, by name: named ones (anyone can join) and unnamed ones you're in. */
+function channelsIn(workspaceId: string): Conversation[] {
+  return allChannelsIn(workspaceId).filter((group) => !group.isUnnamed || isMember(group));
 }
 
 function joinedChannelsIn(workspaceId: string): Conversation[] {
@@ -128,7 +137,7 @@ function homePath(workspaceId: string): string {
   return agentChatPath(workspaceId, AIRENE_ID);
 }
 
-/** "Creative", or an agent chat's title. */
+/** "Creative", an unnamed group's members ("Maya, Airene"), or an agent chat's title. */
 function conversationTitle(conversation: Conversation): string {
   return conversation.name;
 }
@@ -143,7 +152,8 @@ function conversationLabel(conversation: Conversation): string {
 /** URL-safe and unique among groups: "research", then "research-2". */
 function uniqueSlug(workspaceId: string, name: string): string {
   const base = toSlug(name);
-  const taken = new Set(channelsIn(workspaceId).map((item) => item.slug));
+  // "new" is the page for starting a group, so a group named "New" gets "new-2".
+  const taken = new Set([NEW_GROUP_SLUG, ...allChannelsIn(workspaceId).map((item) => item.slug)]);
   let slug = base;
   for (let n = 2; taken.has(slug); n += 1) slug = `${base}-${n}`;
   return slug;
@@ -197,13 +207,82 @@ function createChannel(
   state.conversations.push(conversation);
   postSystemMessage(conversation.id, `${ME} created this group`);
   // People first, then agents: "Rizal Candra added Maya Putri, Airene and Copywriter"
-  const names = [
-    ...personIds.map((id) => getPerson(id)?.name ?? id),
-    ...agentIds.map((id) => getAgent(id)?.name ?? id)
-  ];
-  postSystemMessage(conversation.id, `${ME} added ${listNames(names)}`);
+  postSystemMessage(conversation.id, `${ME} added ${formatList(memberNames(personIds, agentIds))}`);
   introduceAgents({ workspaceId, threadId: conversation.id, agentIds }, agentIds, CURRENT_USER_ID);
   return conversation;
+}
+
+/** The same people and agents, ignoring order; you and Airene are in every group. */
+function hasMembers(conversation: Conversation, personIds: string[], agentIds: string[]) {
+  const people = new Set([CURRENT_USER_ID, ...personIds]);
+  const agents = new Set([AIRENE_ID, ...agentIds]);
+  return (
+    conversation.memberIds.length === people.size &&
+    conversation.memberIds.every((id) => people.has(id)) &&
+    conversation.agentIds.length === agents.size &&
+    conversation.agentIds.every((id) => agents.has(id))
+  );
+}
+
+/**
+ * Your unnamed group with exactly these people and agents, if you have one. New chat opens it
+ * instead of starting a copy, so each group shows once in the sidebar.
+ */
+function findUnnamedGroup(
+  workspaceId: string,
+  personIds: string[],
+  agentIds: string[]
+): Conversation | undefined {
+  return joinedChannelsIn(workspaceId).find(
+    (group) => group.isUnnamed && hasMembers(group, personIds, agentIds)
+  );
+}
+
+/**
+ * A group started from New chat: you, the people and agents you picked, and Airene. It has
+ * no name, so it's titled after its members until someone names it.
+ */
+function createUnnamedGroup(
+  workspaceId: string,
+  input: { personIds: string[]; agentIds: string[] }
+): Conversation {
+  const personIds = [...new Set(input.personIds)].filter((id) => id !== CURRENT_USER_ID);
+  const agentIds = [...new Set([AIRENE_ID, ...input.agentIds])];
+  const conversation: Conversation = {
+    id: createId(`${workspaceId}-channel`),
+    workspaceId,
+    kind: "channel",
+    slug: createId("group"),
+    name: unnamedGroupTitle(personIds, agentIds),
+    description: "",
+    memberIds: [CURRENT_USER_ID, ...personIds],
+    agentIds,
+    agentAddedBy: Object.fromEntries(agentIds.map((id) => [id, CURRENT_USER_ID])),
+    createdAt: new Date().toISOString(),
+    isUnnamed: true
+  };
+  state.conversations.push(conversation);
+  // One line instead of "created" and "added": the first message follows straight away.
+  postSystemMessage(
+    conversation.id,
+    `${ME} started this group with ${formatList(memberNames(personIds, agentIds))}`
+  );
+  return conversation;
+}
+
+/** Names an unnamed group, which then shows its emoji instead of faces, or renames a group. */
+function renameGroup(conversation: Conversation, input: { name: string; emoji: string }): void {
+  const name = input.name.trim().replace(/\s+/g, " ");
+  const wasUnnamed = Boolean(conversation.isUnnamed);
+  const isRenamed = wasUnnamed || name !== conversation.name;
+  conversation.name = name;
+  conversation.emoji = input.emoji;
+  conversation.isUnnamed = undefined;
+  if (!isRenamed) return;
+  postSystemMessage(
+    conversation.id,
+    wasUnnamed ? `${ME} named the group ${name}` : `${ME} renamed the group to ${name}`
+  );
 }
 
 function addMembers(conversation: Conversation, personIds: string[], agentIds: string[]): void {
@@ -214,12 +293,15 @@ function addMembers(conversation: Conversation, personIds: string[], agentIds: s
   conversation.memberIds.push(...newPeople);
   conversation.agentIds.push(...newAgents);
   newAgents.forEach((id) => (conversation.agentAddedBy[id] = CURRENT_USER_ID));
+  // An unnamed group is titled after its members, so its title grows with them.
+  if (conversation.isUnnamed) {
+    conversation.name = unnamedGroupTitle(conversation.memberIds, conversation.agentIds);
+  }
 
-  const names = [
-    ...newPeople.map((id) => getPerson(id)?.name ?? id),
-    ...newAgents.map((id) => getAgent(id)?.name ?? id)
-  ];
-  postSystemMessage(conversation.id, `${ME} added ${listNames(names)}`);
+  postSystemMessage(
+    conversation.id,
+    `${ME} added ${formatList(memberNames(newPeople, newAgents))}`
+  );
   // New agents say hello; people don't get a scripted line.
   if (newAgents.length) {
     introduceAgents(
@@ -280,8 +362,11 @@ export function useWorkspaceStore() {
     homePath,
     conversationTitle,
     conversationLabel,
+    findUnnamedGroup,
     joinChannel,
     createChannel,
+    createUnnamedGroup,
+    renameGroup,
     addMembers,
     createAgentChat,
     togglePin
