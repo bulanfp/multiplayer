@@ -69,8 +69,9 @@ const titleClass = css({
   "[data-done] &": { textDecoration: "line-through", color: "text.secondary" }
 });
 
+// Enterprise links are green: text.selected, since Pixel's text.link stays blue there.
 const linkClass = css({
-  color: "text.link",
+  color: "text.selected",
   textDecoration: "none",
   _hover: { textDecoration: "underline" }
 });

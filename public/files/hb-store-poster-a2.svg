@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="1188" viewBox="0 0 840 1188">
+  <!-- Mock preview of "Store poster A2.pdf" -->
+  <defs>
+    <linearGradient id="cup" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#EBD7BF"/>
+      <stop offset="0.55" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DCC3A6"/>
+    </linearGradient>
+  </defs>
+  <rect width="840" height="1188" fill="#F6EBDD"/>
+  <circle cx="420" cy="470" r="300" fill="#EBCFAF"/>
+
+  <text x="420" y="110" text-anchor="middle" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="600" fill="#8E3C1C" letter-spacing="8">CENTRAL PERK · LIMITED EDITION</text>
+
+  <!-- Steam -->
+  <g fill="none" stroke="#B5562B" stroke-width="7" stroke-linecap="round" opacity="0.45">
+    <path d="M375 245 C355 210 395 190 375 155"/>
+    <path d="M420 238 C400 200 442 180 420 140"/>
+    <path d="M465 245 C445 210 485 190 465 155"/>
+  </g>
+
+  <!-- Cup -->
+  <path d="M290 330 H550 L522 690 Q520 708 502 708 H338 Q320 708 318 690 Z" fill="url(#cup)"/>
+  <path d="M302 448 H538 L529 560 H311 Z" fill="#B5562B"/>
+  <text x="420" y="497" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700" fill="#FFF4E6" letter-spacing="3">HOLIDAY</text>
+  <text x="420" y="530" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="24" font-weight="700" fill="#FFF4E6" letter-spacing="3">BLEND</text>
+  <rect x="272" y="292" width="296" height="46" rx="20" fill="#FFFFFF"/>
+  <path d="M298 292 Q303 264 335 261 H505 Q537 264 542 292 Z" fill="#EFE2D2"/>
+
+  <text x="420" y="860" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="92" font-weight="700" fill="#2E1810">Holiday Blend</text>
+  <text x="420" y="925" text-anchor="middle" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="32" fill="#6E351B">Only here until the year ends.</text>
+
+  <rect x="290" y="975" width="260" height="64" rx="32" fill="#2E1810"/>
+  <text x="420" y="1017" text-anchor="middle" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="700" fill="#F6EBDD">Rp45.000 · Tall</text>
+
+  <text x="420" y="1110" text-anchor="middle" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#6E351B">1–31 December at all 40 Central Perk stores and in the app</text>
+</svg>

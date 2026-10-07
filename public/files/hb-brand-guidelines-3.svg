@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="794" height="1123" viewBox="0 0 794 1123">
+  <!-- Mock preview of "Brand guidelines 2026.pdf", page 3 -->
+  <rect width="794" height="1123" fill="#FFFFFF"/>
+  <g font-family="Inter, 'Helvetica Neue', Arial, sans-serif">
+    <text x="72" y="110" font-size="16" font-weight="600" fill="#B5562B" letter-spacing="4">03 · VOICE</text>
+    <text x="72" y="170" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-weight="700" fill="#0F3D2E">Warm, short,</text>
+    <text x="72" y="228" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-weight="700" fill="#0F3D2E">a little playful</text>
+    <text x="72" y="282" font-size="20" fill="#4B5563">We talk like the barista who remembers your order.</text>
+
+    <g transform="translate(72 340)">
+      <rect width="314" height="300" rx="16" fill="#ECF7F1"/>
+      <text x="28" y="56" font-size="18" font-weight="700" fill="#0F6D4D">Say this</text>
+      <text x="28" y="112" font-size="22" fill="#0F3D2E">“Your first drink</text>
+      <text x="28" y="142" font-size="22" fill="#0F3D2E">is on us.”</text>
+      <text x="28" y="204" font-size="22" fill="#0F3D2E">“Roasted with cinnamon</text>
+      <text x="28" y="234" font-size="22" fill="#0F3D2E">for cold mornings.”</text>
+    </g>
+    <g transform="translate(408 340)">
+      <rect width="314" height="300" rx="16" fill="#FDF0EC"/>
+      <text x="28" y="56" font-size="18" font-weight="700" fill="#B3261E">Not this</text>
+      <text x="28" y="112" font-size="22" fill="#5B1A14">“AMAZING DEALS!!!</text>
+      <text x="28" y="142" font-size="22" fill="#5B1A14">Don't miss out!!!”</text>
+      <text x="28" y="204" font-size="22" fill="#5B1A14">“Experience our premium</text>
+      <text x="28" y="234" font-size="22" fill="#5B1A14">artisanal beverages.”</text>
+    </g>
+
+    <text x="72" y="720" font-size="24" font-weight="700" fill="#0F3D2E">Three rules</text>
+    <g font-size="20" fill="#374151">
+      <circle cx="82" cy="768" r="6" fill="#B5562B"/>
+      <text x="100" y="775">No exclamation marks. Warmth comes from the words.</text>
+      <circle cx="82" cy="818" r="6" fill="#B5562B"/>
+      <text x="100" y="825">Count the words. Cup sleeves fit 12, posters fit 8.</text>
+      <circle cx="82" cy="868" r="6" fill="#B5562B"/>
+      <text x="100" y="875">Say what's in it for them before asking for anything.</text>
+    </g>
+    <text x="72" y="1060" font-size="14" fill="#9CA3AF">Central Perk brand guidelines 2026 · 3</text>
+  </g>
+</svg>

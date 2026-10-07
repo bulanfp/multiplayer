@@ -6,7 +6,7 @@
         Join to send messages and bring in this group's agents.
       </MpText>
     </MpFlex>
-    <MpButton @click="emit('join')">Join group</MpButton>
+    <MpButton is-rounded @click="emit('join')">Join group</MpButton>
   </div>
 </template>
 

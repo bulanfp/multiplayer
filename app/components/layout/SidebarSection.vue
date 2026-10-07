@@ -1,5 +1,8 @@
 <template>
-  <section :aria-labelledby="`${id}-label`">
+  <!-- The chevron and the actions show while the pointer is over the section (its header or
+       its rows) or keyboard focus is in it. Only :focus-visible counts, so a clicked toggle
+       doesn't keep them showing. -->
+  <section :aria-labelledby="`${id}-label`" :class="sectionClass">
     <div :class="headerClass">
       <h2 :class="headingClass">
         <button
@@ -10,17 +13,19 @@
           :aria-controls="`${id}-list`"
           @click="toggle(id)"
         >
-          <MpIcon
-            name="chevrons-down"
-            size="sm"
-            color="icon.default"
-            :class="caretClass"
-            :data-collapsed="!isOpen(id) || undefined"
-          />
           <SectionLabel as="span">{{ label }}</SectionLabel>
+          <span :class="revealClass" data-reveal>
+            <MpIcon
+              name="chevrons-down"
+              size="sm"
+              color="icon.default"
+              :class="caretClass"
+              :data-collapsed="!isOpen(id) || undefined"
+            />
+          </span>
         </button>
       </h2>
-      <div :class="actionsClass">
+      <div :class="[actionsClass, revealClass]" data-reveal>
         <slot name="actions" />
       </div>
     </div>
@@ -45,6 +50,10 @@ defineProps<SidebarSectionProps>();
 
 const { isOpen, toggle } = useSidebarSections();
 
+const sectionClass = css({
+  "&:hover [data-reveal], &:has(:focus-visible) [data-reveal]": { opacity: "1" }
+});
+
 // The whole row highlights on hover; the label part toggles, the icons on the right act.
 const headerClass = css({
   display: "flex",
@@ -59,24 +68,33 @@ const headerClass = css({
 
 const headingClass = css({ flex: "1", minW: "0" });
 
+// 8px in, like the rows below, so the label starts where their icons, emoji and avatars do
+// (and Airene's above). The chevron follows the label.
 const toggleClass = css({
   display: "flex",
   alignItems: "center",
   gap: "1",
   w: "full",
   h: "8",
-  pl: "1",
-  pr: "2",
+  px: "2",
   rounded: "md",
   cursor: "pointer",
   "& > h2, & > span": { px: "0" },
   _focusVisible: { outline: "2px solid", outlineColor: "border.focused" }
 });
 
-const caretClass = css({
-  transition: "transform .15s",
-  "&[data-collapsed]": { transform: "rotate(-90deg)" }
+const revealClass = css({
+  display: "flex",
+  opacity: "0",
+  transition: "opacity .15s ease",
+  _motionReduce: { transition: "none" }
 });
 
-const actionsClass = css({ display: "flex", alignItems: "center", gap: "0.5" });
+const caretClass = css({
+  transition: "transform .15s",
+  "&[data-collapsed]": { transform: "rotate(-90deg)" },
+  _motionReduce: { transition: "none" }
+});
+
+const actionsClass = css({ alignItems: "center", gap: "0.5" });
 </script>

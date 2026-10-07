@@ -4,6 +4,7 @@
     <header :class="headerClass">
       <MpText size="h3">Members</MpText>
       <MpButton
+        is-rounded
         variant="ghost"
         size="sm"
         left-icon="close"
@@ -13,8 +14,8 @@
     </header>
 
     <div :class="bodyClass">
-      <MpButton variant="secondary" left-icon="add" is-full-width @click="emit('add')">
-        {{ conversation.kind === "channel" ? "Add people or agents" : "Add an agent" }}
+      <MpButton is-rounded variant="secondary" left-icon="add" is-full-width @click="emit('add')">
+        Add people or agents
       </MpButton>
 
       <section>

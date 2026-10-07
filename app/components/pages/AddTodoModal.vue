@@ -1,9 +1,15 @@
 <template>
-  <MpModal id="add-todo-modal" :is-open="isOpen" size="md" @close="handleClose">
+  <MpModal
+    id="add-todo-modal"
+    :is-open="isOpen"
+    size="md"
+    scroll-behavior="auto"
+    @close="handleClose"
+  >
     <MpModalContent>
       <MpModalHeader>
         Add a todo
-        <MpModalCloseButton />
+        <MpModalCloseButton is-rounded aria-label="Close" />
       </MpModalHeader>
       <MpModalBody>
         <form id="add-todo-form" @submit.prevent="submit">
@@ -47,8 +53,8 @@
       </MpModalBody>
       <MpModalFooter>
         <MpButtonGroup>
-          <MpButton variant="secondary" @click="handleClose">Cancel</MpButton>
-          <MpButton @click="submit">Add todo</MpButton>
+          <MpButton is-rounded variant="ghost" @click="handleClose">Cancel</MpButton>
+          <MpButton is-rounded @click="submit">Add todo</MpButton>
         </MpButtonGroup>
       </MpModalFooter>
     </MpModalContent>

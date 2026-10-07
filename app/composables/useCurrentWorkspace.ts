@@ -4,7 +4,7 @@ import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 
 const SECTION_BY_SEGMENT: Record<string, RailSection> = {
   c: "home",
-  groups: "home",
+  chat: "home",
   activity: "activity",
   library: "library",
   todos: "todos",
@@ -12,7 +12,7 @@ const SECTION_BY_SEGMENT: Record<string, RailSection> = {
 };
 
 /** Sections whose submenu panel sits next to the page. */
-const SECTIONS_WITH_SUBMENU: RailSection[] = ["home", "agents"];
+const SECTIONS_WITH_SUBMENU: RailSection[] = ["home"];
 
 // Parsed from the path because catch-all pages have no workspaceId param.
 export function useCurrentWorkspace() {

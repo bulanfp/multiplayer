@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="794" height="1123" viewBox="0 0 794 1123">
+  <!-- Mock preview of "Brand guidelines 2026.pdf", page 1 -->
+  <rect width="794" height="1123" fill="#0F3D2E"/>
+  <circle cx="680" cy="170" r="260" fill="#14523D"/>
+  <circle cx="120" cy="1010" r="190" fill="#14523D"/>
+  <g transform="translate(96 150)">
+    <circle cx="36" cy="36" r="36" fill="#E3A63B"/>
+    <path d="M18 30 H54 L50 58 Q49 62 45 62 H27 Q23 62 22 58 Z" fill="#0F3D2E"/>
+    <path d="M54 36 Q66 36 64 46 Q62 54 52 52" fill="none" stroke="#0F3D2E" stroke-width="5"/>
+  </g>
+  <text x="96" y="420" font-family="Georgia, 'Times New Roman', serif" font-size="76" font-weight="700" fill="#F6EBDD">Central Perk</text>
+  <text x="96" y="500" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="40" fill="#E3A63B">Brand guidelines 2026</text>
+  <rect x="96" y="548" width="80" height="6" rx="3" fill="#E3A63B"/>
+  <text x="96" y="620" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#CFE0D8">Logo, colour, type and voice for every store,</text>
+  <text x="96" y="654" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="22" fill="#CFE0D8">screen and cup.</text>
+  <text x="96" y="1020" font-family="Inter, 'Helvetica Neue', Arial, sans-serif" font-size="18" fill="#9DBFB1">Version 1.2 · Marketing team · PT Central Perk Indonesia</text>
+</svg>

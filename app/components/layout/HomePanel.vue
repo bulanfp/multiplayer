@@ -1,48 +1,51 @@
 <template>
   <div v-if="workspace" :class="panelClass">
+    <!-- ═════ Header: Chats, and + to chat with an agent or create a group ═════ -->
     <div :class="headerClass">
-      <ProjectInfoMenu :workspace="workspace" />
+      <SectionLabel>Chats</SectionLabel>
+      <MpPopover
+        id="new-chat-menu"
+        v-slot="{ onClosePopover }"
+        placement="bottom-start"
+        use-portal
+        :is-keep-alive="false"
+      >
+        <MpPopoverTrigger>
+          <MpButton variant="ghost" size="sm" left-icon="add" aria-label="New chat or group" />
+        </MpPopoverTrigger>
+        <MpPopoverContent :class="menuClass">
+          <MpPopoverList :class="menuListClass">
+            <MpPopoverListItem @click="openModal('new-chat', onClosePopover)">
+              <MpFlex alignItems="center" gap="3">
+                <MpIcon name="chat" size="sm" />
+                <MpText>Chat with an agent</MpText>
+              </MpFlex>
+            </MpPopoverListItem>
+            <MpPopoverListItem @click="openModal('create-channel', onClosePopover)">
+              <MpFlex alignItems="center" gap="3">
+                <MpIcon name="people" size="sm" />
+                <MpText>Create group</MpText>
+              </MpFlex>
+            </MpPopoverListItem>
+          </MpPopoverList>
+        </MpPopoverContent>
+      </MpPopover>
     </div>
 
-    <!-- ═════ Groups ═════ -->
-    <SidebarSection id="chats-groups" label="Groups">
-      <template #actions>
-        <MpTooltip id="browse-groups-tooltip" label="Browse groups" use-portal>
-          <MpButton
-            variant="ghost"
-            size="sm"
-            left-icon="search"
-            aria-label="Browse groups"
-            @click="navigateTo(`${workspacePath(workspace.id)}/groups`)"
-          />
-        </MpTooltip>
-        <MpTooltip id="create-group-tooltip" label="Create group" use-portal>
-          <MpButton
-            variant="ghost"
-            size="sm"
-            left-icon="add"
-            aria-label="Create group"
-            @click="open('create-channel')"
-          />
-        </MpTooltip>
-      </template>
+    <!-- ═════ Pinned: groups you pinned, oldest pin first ═════ -->
+    <SidebarSection v-if="pinned.length" id="chats-pinned" label="Pinned">
       <template #default="{ isOpen }">
         <ul :class="listClass">
           <li
-            v-for="group in groups"
+            v-for="group in pinned"
             :key="group.id"
             :class="rowClass"
-            :data-hidden="isTucked(group, isOpen) || undefined"
-            :inert="isTucked(group, isOpen)"
+            :data-hidden="isGroupTucked(group, isOpen) || undefined"
+            :inert="isGroupTucked(group, isOpen)"
           >
             <div :class="rowInnerClass">
               <div :class="rowSpacingClass">
-                <SideMenuItem
-                  :to="conversationPath(workspace.id, group.slug)"
-                  :prefix="group.emoji"
-                  :label="group.name"
-                  :badge="unreadCount(group.id)"
-                />
+                <ConversationMenuItem :conversation="group" />
               </div>
             </div>
           </li>
@@ -50,41 +53,41 @@
       </template>
     </SidebarSection>
 
-    <!-- ═════ Direct messages: people and agents ═════ -->
-    <SidebarSection id="chats-direct" label="Direct messages">
-      <template #actions>
-        <MpTooltip id="new-message-tooltip" label="New message" use-portal>
-          <MpButton
-            variant="ghost"
-            size="sm"
-            left-icon="add"
-            aria-label="New message"
-            @click="open('new-message')"
-          />
-        </MpTooltip>
-      </template>
+    <!-- ═════ Agents: Airene first, then the ones you chat with; each opens its chats ═════ -->
+    <SidebarSection id="chats-agents" label="Agents">
       <template #default="{ isOpen }">
         <ul :class="listClass">
           <li
-            v-for="dm in directMessages"
-            :key="dm.id"
+            v-for="agent in agents"
+            :key="agent.id"
             :class="rowClass"
-            :data-hidden="isTucked(dm, isOpen) || undefined"
-            :inert="isTucked(dm, isOpen)"
+            :data-hidden="isAgentTucked(agent.id, isOpen) || undefined"
+            :inert="isAgentTucked(agent.id, isOpen)"
           >
             <div :class="rowInnerClass">
               <div :class="rowSpacingClass">
-                <SideMenuItem
-                  :to="conversationPath(workspace.id, dm.slug)"
-                  :label="dmLabel(dm)"
-                  :badge="unreadCount(dm.id)"
-                >
-                  <template #leading>
-                    <span :class="dmAvatarClass">
-                      <MemberAvatar :actor="dmActor(dm)" size="xs" />
-                    </span>
-                  </template>
-                </SideMenuItem>
+                <AgentMenuItem :workspace-id="workspace.id" :agent-id="agent.id" />
+              </div>
+            </div>
+          </li>
+        </ul>
+      </template>
+    </SidebarSection>
+
+    <!-- ═════ Groups you're in ═════ -->
+    <SidebarSection id="chats-groups" label="Groups">
+      <template #default="{ isOpen }">
+        <ul :class="listClass">
+          <li
+            v-for="group in groups"
+            :key="group.id"
+            :class="rowClass"
+            :data-hidden="isGroupTucked(group, isOpen) || undefined"
+            :inert="isGroupTucked(group, isOpen)"
+          >
+            <div :class="rowInnerClass">
+              <div :class="rowSpacingClass">
+                <ConversationMenuItem :conversation="group" />
               </div>
             </div>
           </li>
@@ -96,68 +99,96 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { css, MpButton, MpTooltip } from "@mekari/pixel3";
-import ProjectInfoMenu from "~/components/layout/ProjectInfoMenu.vue";
-import SideMenuItem from "~/components/layout/SideMenuItem.vue";
+import {
+  css,
+  MpButton,
+  MpFlex,
+  MpIcon,
+  MpPopover,
+  MpPopoverContent,
+  MpPopoverList,
+  MpPopoverListItem,
+  MpPopoverTrigger,
+  MpText
+} from "@mekari/pixel3";
+import AgentMenuItem from "~/components/layout/AgentMenuItem.vue";
+import ConversationMenuItem from "~/components/layout/ConversationMenuItem.vue";
+import SectionLabel from "~/components/layout/SectionLabel.vue";
 import SidebarSection from "~/components/layout/SidebarSection.vue";
-import MemberAvatar from "~/components/shared/MemberAvatar.vue";
-import { useAppModals } from "~/composables/useAppModals";
+import { useAppModals, type AppModal } from "~/composables/useAppModals";
 import { useChatStore } from "~/composables/useChatStore";
 import { useCurrentWorkspace } from "~/composables/useCurrentWorkspace";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
-import { getAgent } from "~/data/agents";
-import { CURRENT_USER_ID } from "~/data/people";
-import type { Actor, Conversation } from "~/data/types";
-import { conversationPath, workspacePath } from "~/utils/paths";
+import { AIRENE_ID, getAgent } from "~/data/agents";
+import type { Agent, Conversation } from "~/data/types";
+import { agentChatPath, conversationPath } from "~/utils/paths";
 
 const route = useRoute();
 const { workspace } = useCurrentWorkspace();
-const { joinedChannelsIn, dmsIn, agentDmsIn, conversationTitle } = useWorkspaceStore();
-const { unreadCount, lastMessageAt } = useChatStore();
+const { chatAgentsIn, agentUnreadCount, joinedChannelsIn } = useWorkspaceStore();
+const { unreadCount } = useChatStore();
 const { open } = useAppModals();
 
-const groups = computed(() => (workspace.value ? joinedChannelsIn(workspace.value.id) : []));
-
-// People and agents together, most recent conversation first.
-const directMessages = computed(() => {
-  if (!workspace.value) return [];
-  const lastActivity = (dm: Conversation) => lastMessageAt(dm.id) ?? dm.createdAt;
-  return [...dmsIn(workspace.value.id), ...agentDmsIn(workspace.value.id)].sort((a, b) =>
-    lastActivity(b).localeCompare(lastActivity(a))
-  );
+// Airene is always there, even before your first chat with her.
+const agents = computed<Agent[]>(() => {
+  const airene = getAgent(AIRENE_ID);
+  return [
+    ...(airene ? [airene] : []),
+    ...(workspace.value ? chatAgentsIn(workspace.value.id) : [])
+  ];
 });
 
+const pinned = computed(() =>
+  workspace.value
+    ? joinedChannelsIn(workspace.value.id)
+        .filter((group) => group.pinnedAt)
+        .sort((a, b) => a.pinnedAt!.localeCompare(b.pinnedAt!))
+    : []
+);
+
+// Pinned groups move up to Pinned, so they aren't listed twice.
+const groups = computed(() =>
+  workspace.value ? joinedChannelsIn(workspace.value.id).filter((group) => !group.pinnedAt) : []
+);
+
 /** Folded away while the section is collapsed; the open chat and unread ones stay, like Slack. */
-function isTucked(item: Conversation, isOpen: boolean): boolean {
+function isGroupTucked(group: Conversation, isOpen: boolean): boolean {
   if (isOpen || !workspace.value) return false;
-  const isOpenChat = route.path === conversationPath(workspace.value.id, item.slug);
-  return unreadCount(item.id) === 0 && !isOpenChat;
+  const isOpenChat = route.path === conversationPath(workspace.value.id, group.slug);
+  return unreadCount(group.id) === 0 && !isOpenChat;
 }
 
-function dmActor(dm: Conversation): Actor {
-  if (dm.kind === "agent") return { kind: "agent", id: dm.agentIds[0] ?? "" };
-  return {
-    kind: "person",
-    id: dm.memberIds.find((id) => id !== CURRENT_USER_ID) ?? CURRENT_USER_ID
-  };
+function isAgentTucked(agentId: string, isOpen: boolean): boolean {
+  if (isOpen || !workspace.value) return false;
+  const base = agentChatPath(workspace.value.id, agentId);
+  const isOpenChat = route.path === base || route.path.startsWith(`${base}/`);
+  return agentUnreadCount(workspace.value.id, agentId) === 0 && !isOpenChat;
 }
 
-function dmLabel(dm: Conversation): string {
-  return dm.kind === "agent"
-    ? (getAgent(dm.agentIds[0] ?? "")?.name ?? conversationTitle(dm))
-    : conversationTitle(dm);
+function openModal(modal: AppModal, close: () => void) {
+  close();
+  open(modal);
 }
 
 const panelClass = css({ display: "flex", flexDirection: "column", gap: "4", px: "1.5", pb: "6" });
 
-// Same height as the page header so the project name lines up with the page title.
+// Same height as the page header so "Chats" lines up with the page title, then pulled in so
+// the Agents section starts close below it.
 const headerClass = css({
   display: "flex",
   alignItems: "center",
+  justifyContent: "space-between",
+  gap: "2",
   h: "72px",
   flexShrink: "0",
-  mb: "-2"
+  mb: "-6"
 });
+
+// The menu reads as a short list of what you can start.
+const menuClass = css({ w: "220px" });
+
+// Pixel's list pads 12px above and 8px below; 4px on both keeps the menu compact and even.
+const menuListClass = css({ py: "1" });
 
 const listClass = css({ display: "flex", flexDirection: "column", mt: "1" });
 
@@ -174,12 +205,4 @@ const rowInnerClass = css({ minH: "0", overflow: "hidden" });
 
 // The 2px between rows sits inside the clipped part so it folds away with the row.
 const rowSpacingClass = css({ pb: "0.5" });
-
-// Centres the 20px avatar in the same 24px column as icons and group emoji.
-const dmAvatarClass = css({
-  display: "inline-flex",
-  justifyContent: "center",
-  w: "6",
-  flexShrink: "0"
-});
 </script>

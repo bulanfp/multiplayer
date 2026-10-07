@@ -51,6 +51,15 @@ export function formatTimestamp(iso: string): string {
   return `${SHORT_DATE.format(new Date(iso))} at ${time}`;
 }
 
+/** Table timestamps: "Today, 10:18", "Yesterday, 16:31", "4 Oct, 09:00". */
+export function formatDateTime(iso: string): string {
+  const diff = daysAgo(iso);
+  const time = formatTime(iso);
+  if (diff === 0) return `Today, ${time}`;
+  if (diff === 1) return `Yesterday, ${time}`;
+  return `${SHORT_DATE.format(new Date(iso))}, ${time}`;
+}
+
 /** "6 Oct 2026" style date for invites. */
 export function formatDate(iso: string): string {
   const diff = daysAgo(iso);
@@ -61,6 +70,23 @@ export function formatDate(iso: string): string {
     month: "short",
     year: "numeric"
   }).format(new Date(iso));
+}
+
+/** "just now", "5m ago", "3h ago", "2d ago", "1mo ago" */
+export function formatAgo(iso: string): string {
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return `${Math.floor(days / 30)}mo ago`;
+}
+
+/** "Rp969.144", the way Indonesian finance screens show rupiah. */
+export function formatRupiah(amount: number): string {
+  return `Rp${Math.round(amount).toLocaleString("id-ID")}`;
 }
 
 export function formatDue(iso: string): { label: string; isOverdue: boolean } {

@@ -19,279 +19,6 @@ export interface OutputTemplate {
 }
 
 const TEMPLATES: OutputTemplate[] = [
-  // ─── Mobile ordering app 2.0 ───────────────────────────────────────────────
-  {
-    key: "checkout-flow-spec",
-    title: "Checkout flow spec",
-    kind: "Spec",
-    versions: [
-      {
-        reply:
-          "Here's a spec for the pickup step, {sender}. ASAP becomes the default and the time picker moves behind a link.",
-        blocks: [
-          { type: "heading", text: "Problem" },
-          {
-            type: "paragraph",
-            text: "38% of people drop off at the pickup-time step. Most of them pick the first available slot anyway."
-          },
-          { type: "heading", text: "Proposed flow" },
-          {
-            type: "list",
-            items: [
-              'Default to ASAP with the store\'s live prep time, e.g. "Ready in 8–12 min"',
-              'Show "Schedule for later" as a secondary link',
-              "Remember the last store and pickup preference",
-              "Keep the order summary pinned above the pay button"
-            ]
-          },
-          { type: "heading", text: "Edge cases" },
-          {
-            type: "list",
-            items: [
-              "Store closes within 30 minutes: disable ASAP and say why",
-              "Prep time over 25 minutes: suggest the nearest store with a shorter wait",
-              "Connection drops: keep the cart and retry when back online"
-            ]
-          },
-          { type: "heading", text: "Success metric" },
-          { type: "paragraph", text: "Pickup-step drop-off under 20% within two weeks of release." }
-        ]
-      },
-      {
-        reply: "Updated, {sender}. I added the store-closing rule and an A/B test plan.",
-        blocks: [
-          { type: "heading", text: "Problem" },
-          {
-            type: "paragraph",
-            text: "38% of people drop off at the pickup-time step. Most of them pick the first available slot anyway."
-          },
-          { type: "heading", text: "Proposed flow" },
-          {
-            type: "list",
-            items: [
-              'Default to ASAP with the store\'s live prep time, e.g. "Ready in 8–12 min"',
-              'Show "Schedule for later" as a secondary link',
-              "Remember the last store and pickup preference",
-              "Keep the order summary pinned above the pay button"
-            ]
-          },
-          { type: "heading", text: "Store closing rule" },
-          {
-            type: "paragraph",
-            text: "Stop ASAP orders 20 minutes before closing. Scheduled orders stay open until 45 minutes before closing."
-          },
-          { type: "heading", text: "Experiment" },
-          {
-            type: "list",
-            items: [
-              "50/50 split for 14 days on Android and iOS",
-              "Primary metric: checkout completion",
-              "Guardrail: order cancellations within 10 minutes"
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    key: "rewards-api-contract",
-    title: "Rewards API contract",
-    kind: "API contract",
-    versions: [
-      {
-        reply: "Drafted the rewards endpoint, {sender}. Balance is always a number, never null.",
-        blocks: [
-          { type: "heading", text: "GET /v2/rewards/balance" },
-          {
-            type: "paragraph",
-            text: "Returns the member's points and tier. Requires a member token."
-          },
-          { type: "heading", text: "Response 200" },
-          {
-            type: "list",
-            items: [
-              "points: integer, 0 when the member has no points",
-              'tier: "green", "gold" or "reserve"',
-              "expiringPoints: integer, points expiring in the next 30 days",
-              "updatedAt: ISO 8601 timestamp"
-            ]
-          },
-          { type: "heading", text: "Errors" },
-          {
-            type: "list",
-            items: [
-              "401 when the token is missing or expired",
-              "404 when the member account was deleted"
-            ]
-          },
-          { type: "heading", text: "Notes" },
-          {
-            type: "paragraph",
-            text: "Clients should treat a missing field as a bug, not as zero. Cache the response for 60 seconds."
-          }
-        ]
-      },
-      {
-        reply: "Added history pagination and the rounding rule for partial points, {sender}.",
-        blocks: [
-          { type: "heading", text: "GET /v2/rewards/balance" },
-          {
-            type: "list",
-            items: [
-              "points: integer, 0 when the member has no points",
-              'tier: "green", "gold" or "reserve"',
-              "expiringPoints: integer, points expiring in the next 30 days"
-            ]
-          },
-          { type: "heading", text: "GET /v2/rewards/history" },
-          {
-            type: "list",
-            items: [
-              "Cursor-based pagination, 20 items per page",
-              "Each item: orderId, points, reason, createdAt",
-              "Points are rounded down to whole numbers"
-            ]
-          },
-          { type: "heading", text: "Errors" },
-          {
-            type: "list",
-            items: ["401 when the token is missing or expired", "429 above 30 requests a minute"]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    key: "regression-test-plan",
-    title: "Regression test plan",
-    kind: "Test plan",
-    versions: [
-      {
-        reply:
-          "Here's the regression plan for beta.3, {sender}. I added two todos for the riskiest areas.",
-        blocks: [
-          { type: "heading", text: "Scope" },
-          {
-            type: "paragraph",
-            text: "Checkout v2, rewards balance and order history on iOS 17+ and Android 11+."
-          },
-          { type: "heading", text: "Critical paths" },
-          {
-            type: "list",
-            items: [
-              "Order with ASAP pickup and pay with a saved card",
-              "Schedule a pickup for later today",
-              "Redeem points at checkout",
-              "Reorder from history"
-            ]
-          },
-          { type: "heading", text: "Devices" },
-          {
-            type: "list",
-            items: [
-              "iPhone 13 and iPhone 15 Pro",
-              "Samsung A54 and Pixel 7",
-              "A low-end Android phone with 3 GB RAM"
-            ]
-          },
-          { type: "heading", text: "Exit criteria" },
-          {
-            type: "list",
-            items: ["No open P0 or P1 bugs", "Crash-free sessions above 99.5% in the beta"]
-          }
-        ],
-        todos: [
-          { title: "Test pickup time edge cases", assigneeId: "tari" },
-          { title: "Verify points rounding on Android", assigneeId: "budi" }
-        ]
-      },
-      {
-        reply: "Added an accessibility pass and the release checklist, {sender}.",
-        blocks: [
-          { type: "heading", text: "Scope" },
-          {
-            type: "paragraph",
-            text: "Checkout v2, rewards balance and order history on iOS 17+ and Android 11+."
-          },
-          { type: "heading", text: "Critical paths" },
-          {
-            type: "list",
-            items: [
-              "Order with ASAP pickup and pay with a saved card",
-              "Schedule a pickup for later today",
-              "Redeem points at checkout",
-              "Reorder from history"
-            ]
-          },
-          { type: "heading", text: "Accessibility" },
-          {
-            type: "list",
-            items: [
-              "VoiceOver and TalkBack through checkout",
-              "Dynamic type at 200% on the cart and pay screens"
-            ]
-          },
-          { type: "heading", text: "Release checklist" },
-          {
-            type: "list",
-            items: [
-              "Feature flags set for a 10% rollout",
-              "Release notes approved by product",
-              "Support team briefed on checkout changes"
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    key: "sprint-summary",
-    title: "Sprint 3 summary",
-    kind: "Summary",
-    versions: [
-      {
-        reply: "Here's the sprint 3 summary for Friday's steering meeting, {sender}.",
-        blocks: [
-          { type: "heading", text: "Shipped" },
-          {
-            type: "list",
-            items: ["New store picker", "Saved cards", "Rewards balance, behind a feature flag"]
-          },
-          { type: "heading", text: "Slipped" },
-          { type: "list", items: ["Order history filters, moved to sprint 4"] },
-          { type: "heading", text: "Risks" },
-          {
-            type: "list",
-            items: ["Null balance crash on Android 12", "Checkout drop-off still at 38%"]
-          },
-          { type: "heading", text: "Sprint 4 focus" },
-          { type: "paragraph", text: "Checkout v2, rewards API v2 and the beta.3 build." }
-        ]
-      },
-      {
-        reply: "Updated with this week's progress, {sender}.",
-        blocks: [
-          { type: "heading", text: "Shipped" },
-          {
-            type: "list",
-            items: ["New store picker", "Saved cards", "Rewards balance, behind a feature flag"]
-          },
-          { type: "heading", text: "This week" },
-          {
-            type: "list",
-            items: [
-              "Null balance fix merged",
-              "Checkout spec ready for review",
-              "Beta.3 build on TestFlight"
-            ]
-          },
-          { type: "heading", text: "Next" },
-          { type: "paragraph", text: "Regression testing starts Thursday." }
-        ]
-      }
-    ]
-  },
-
   // ─── Holiday Blend launch ──────────────────────────────────────────────────
   {
     key: "campaign-brief",
@@ -488,7 +215,7 @@ const TEMPLATES: OutputTemplate[] = [
           { type: "paragraph", text: "Weekdays at 07:00 and 19:00 WIB, weekends at 10:00." }
         ],
         todos: [
-          { title: "Book the KOL shoot for week 2", assigneeId: "kevin" },
+          { title: "Book the creator shoot for week 2", assigneeId: "kevin" },
           { title: "Shoot the launch reel", assigneeId: "nadia" }
         ]
       },
@@ -562,6 +289,439 @@ const TEMPLATES: OutputTemplate[] = [
           {
             type: "list",
             items: ["IDR 38M spent of 45M planned", "Cost per waitlist sign-up IDR 9,900"]
+          }
+        ]
+      }
+    ]
+  },
+  // ─── From your agent chats ─────────────────────────────────────────────────
+  {
+    key: "cup-sleeve-copy",
+    title: "Cup sleeve copy",
+    kind: "Copy",
+    versions: [
+      {
+        reply: "Three options, all 12 words or fewer.",
+        blocks: [
+          { type: "heading", text: "Options" },
+          {
+            type: "list",
+            items: [
+              '"Roasted for cold mornings. Gone after December." (7 words)',
+              '"Your December ritual, in a cup." (6 words)',
+              '"Spiced, smooth and only here till the year ends." (9 words)'
+            ]
+          },
+          {
+            type: "paragraph",
+            text: "Option 1 fits the back panel of the sleeve with room left for the barcode."
+          }
+        ]
+      },
+      {
+        reply: "More playful: v2 has three lighter takes.",
+        blocks: [
+          { type: "heading", text: "Options" },
+          {
+            type: "list",
+            items: [
+              '"Warning: may cause cozy." (4 words)',
+              '"A hug in a cup. Limited edition." (7 words)',
+              '"Sip happens. Make it a Holiday Blend." (7 words)'
+            ]
+          }
+        ]
+      },
+      {
+        reply: "Back to the first one, now with the cinnamon.",
+        blocks: [
+          { type: "heading", text: "Final line" },
+          {
+            type: "paragraph",
+            text: '"Roasted with cinnamon for cold mornings. Gone after December." (9 words)'
+          },
+          { type: "heading", text: "Placement" },
+          {
+            type: "list",
+            items: [
+              "Back panel, above the barcode",
+              "Cinnamon in the brand orange; the rest in coffee brown"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "launch-kpi-targets",
+    title: "Launch KPI targets",
+    kind: "Targets",
+    versions: [
+      {
+        reply: "Here are the launch targets, based on the benchmarks above.",
+        blocks: [
+          { type: "heading", text: "Instagram" },
+          {
+            type: "list",
+            items: [
+              "Engagement rate: 3% (healthy range 2.5–4%)",
+              "Treat anything above 5% as inflated by giveaways"
+            ]
+          },
+          { type: "heading", text: "TikTok" },
+          {
+            type: "list",
+            items: [
+              "Engagement rate: 2% (healthy range 1.5–3%)",
+              "Completion rate on 15-second reels: 30% or more"
+            ]
+          },
+          { type: "heading", text: "Waitlist" },
+          {
+            type: "list",
+            items: [
+              "Cost per sign-up: IDR 5,000 (typical in Jakarta: IDR 3,000–6,000)",
+              "Above IDR 8,000: rework the first second of the ad"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "kickoff-questions",
+    title: "Kickoff open questions",
+    kind: "Notes",
+    versions: [
+      {
+        reply: "Three questions are still open from kickoff, with who can answer each.",
+        blocks: [
+          { type: "heading", text: "Open questions" },
+          {
+            type: "list",
+            items: [
+              "Final price per cup: Maya, with finance",
+              "Do delivery apps get the blend at launch? Maya",
+              "Who signs off on KOL contracts? Maya; legal reviews anything over IDR 50 million"
+            ]
+          },
+          { type: "heading", text: "Next step" },
+          {
+            type: "paragraph",
+            text: "Settle the delivery-app timing before Friday's store briefing."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "launch-week-plan",
+    title: "Launch week plan",
+    kind: "Plan",
+    versions: [
+      {
+        reply: "Here's launch week, day by day, with who owns each piece.",
+        blocks: [
+          { type: "heading", text: "Monday 1 Nov: launch" },
+          {
+            type: "list",
+            items: [
+              "07:00 launch reel on Instagram and TikTok: “Warm cups. Short season.” (Nadia)",
+              "07:00 Rewards push to 182K members (CRM marketer)",
+              "Store posters up before opening (Dewi, with the store managers)"
+            ]
+          },
+          { type: "heading", text: "Wednesday" },
+          { type: "list", items: ["Barista tasting notes carousel (Nadia)"] },
+          { type: "heading", text: "Thursday to Saturday" },
+          {
+            type: "list",
+            items: [
+              "Three creator posts, one a day (Kevin)",
+              "Pop-ups in Senopati, Kemang and Dago on Saturday (Maya)"
+            ]
+          },
+          { type: "heading", text: "Every day" },
+          {
+            type: "list",
+            items: [
+              "Stories at 19:00 with “Only here until the year ends.”",
+              "Waitlist link in the first frame of every ad"
+            ]
+          },
+          { type: "heading", text: "Paid budget" },
+          {
+            type: "paragraph",
+            text: "40% of the week's budget on Monday and Tuesday, when the teaser got its cheapest sign-ups (Fajar)."
+          }
+        ]
+      },
+      {
+        reply: "Moved the creator posts up to Tuesday so they ride on the launch reel.",
+        blocks: [
+          { type: "heading", text: "What changed" },
+          {
+            type: "list",
+            items: [
+              "Creator posts: Tuesday to Thursday, one a day",
+              "Barista carousel moves to Friday",
+              "Pop-ups stay on Saturday"
+            ]
+          },
+          { type: "heading", text: "Why" },
+          {
+            type: "paragraph",
+            text: "Creator posts the day after a launch reel reached 30% more people in the teaser."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "creator-shortlist",
+    title: "Creator shortlist",
+    kind: "Shortlist",
+    versions: [
+      {
+        reply:
+          "Eight creators who fit, {sender}. None of them worked with another coffee brand in the last 3 months.",
+        blocks: [
+          { type: "heading", text: "Top five" },
+          {
+            type: "list",
+            items: [
+              "Ngopi di Kota: 280K followers, Jakarta, coffee reviews",
+              "Sarapan Sore: 190K, Bandung, food and cafés",
+              "Rina Roams: 140K, Jakarta, lifestyle",
+              "Kopi dan Kamu: 95K, Jakarta, home brewing",
+              "Bandung Bites: 70K, Bandung, food"
+            ]
+          },
+          { type: "heading", text: "Also good" },
+          {
+            type: "list",
+            items: [
+              "Pagi Hari Vlog: 120K, Jakarta",
+              "Kafe Hopping ID: 85K, Jakarta and Bandung",
+              "Senja Stories: 60K, Bandung"
+            ]
+          },
+          { type: "heading", text: "Rates" },
+          {
+            type: "paragraph",
+            text: "IDR 4–12 million per reel. The top five come to IDR 38 million."
+          }
+        ]
+      },
+      {
+        reply: "Added audience splits and an outreach draft, {sender}.",
+        blocks: [
+          { type: "heading", text: "Audience" },
+          {
+            type: "list",
+            items: [
+              "Ngopi di Kota: 68% aged 18–34, 74% Jakarta",
+              "Sarapan Sore: 61% aged 18–34, 70% Bandung",
+              "Rina Roams: 72% aged 18–34, 58% Jakarta"
+            ]
+          },
+          { type: "heading", text: "Outreach draft" },
+          {
+            type: "paragraph",
+            text: "Hi! We're launching the Holiday Blend on 1 Nov and would love you to try it first. One reel in week 2, filmed at the store of your choice. Rates and the brief are attached."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "member-early-access",
+    title: "Rewards early-access email",
+    kind: "Email",
+    versions: [
+      {
+        reply: "Here's the early-access email and the launch push, {sender}.",
+        blocks: [
+          { type: "heading", text: "Subject" },
+          { type: "paragraph", text: "You're first: the Holiday Blend is back tomorrow" },
+          { type: "heading", text: "Preview text" },
+          { type: "paragraph", text: "Rewards members get it a day early, with double points." },
+          { type: "heading", text: "Body" },
+          {
+            type: "paragraph",
+            text: "It's back, and you're the first to know. From 31 Oct, Rewards members can order the Holiday Blend in the app a day before everyone else, with double points on every cup until 7 Nov."
+          },
+          { type: "heading", text: "Launch push, 1 Nov at 07:00" },
+          {
+            type: "paragraph",
+            text: "Cold morning? The Holiday Blend is here. Only until the year ends."
+          }
+        ]
+      },
+      {
+        reply: "Three shorter subject lines to test, {sender}.",
+        blocks: [
+          { type: "heading", text: "Subject lines" },
+          {
+            type: "list",
+            items: [
+              "A day early, just for you",
+              "Your Holiday Blend is ready",
+              "Double points, one day early"
+            ]
+          },
+          { type: "heading", text: "Test" },
+          {
+            type: "paragraph",
+            text: "Send each to 5% of members at 10:00, then the best one to everyone at 13:00."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "competitor-holiday-scan",
+    title: "Competitor holiday scan",
+    kind: "Research",
+    versions: [
+      {
+        reply: "Here's what five coffee chains are doing for the holidays.",
+        blocks: [
+          { type: "heading", text: "What they're doing" },
+          {
+            type: "list",
+            items: [
+              "Kopi Senja: Cinnamon Aren latte from mid-November, bundled with a tumbler",
+              "Ruang Seduh: Spiced Latte, app-only for its first week",
+              "Pagi Coffee: gift cards with 10% extra, no seasonal drink",
+              "Kopi Kala: Christmas-themed cups in Jakarta malls",
+              "Brew Lab: buy one, get one free on Fridays in December"
+            ]
+          },
+          { type: "heading", text: "Gaps we can own" },
+          {
+            type: "list",
+            items: [
+              "Nobody launches before mid-November, so we'd be first by two weeks",
+              "Only one other chain avoids Christmas themes; our season-first look stands out"
+            ]
+          },
+          { type: "heading", text: "Watch" },
+          {
+            type: "paragraph",
+            text: "Brew Lab's Friday deal could pull price-sensitive customers in December."
+          }
+        ]
+      },
+      {
+        reply: "Added what people are saying online about each launch.",
+        blocks: [
+          { type: "heading", text: "Online chatter, last 30 days" },
+          {
+            type: "list",
+            items: [
+              "Kopi Senja: excited about the tumbler, mixed on the price",
+              "Ruang Seduh: complaints that app-only leaves out walk-ins",
+              "Kopi Kala: the cups get shared a lot, the drinks barely mentioned"
+            ]
+          },
+          { type: "heading", text: "For us" },
+          {
+            type: "paragraph",
+            text: "Keep the Holiday Blend in stores and the app from day one, and make the cup sleeve worth a photo."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "paid-media-plan",
+    title: "Launch month paid plan",
+    kind: "Plan",
+    versions: [
+      {
+        reply: "Here's the paid plan for launch month, {sender}.",
+        blocks: [
+          { type: "heading", text: "Budget" },
+          {
+            type: "paragraph",
+            text: "IDR 270 million across November: 60% Meta, 30% TikTok, 10% Google."
+          },
+          { type: "heading", text: "Phases" },
+          {
+            type: "list",
+            items: [
+              "Week 1: reach, with the launch reel and the key visual",
+              "Week 2: boost the creator posts",
+              "Weeks 3 and 4: retarget people who watched half a reel or more"
+            ]
+          },
+          { type: "heading", text: "Guardrails" },
+          {
+            type: "list",
+            items: [
+              "Frequency cap of 3 a week",
+              "Pause any ad above IDR 8,000 per sign-up for 2 days"
+            ]
+          }
+        ]
+      },
+      {
+        reply: "Moved 15% from TikTok to Instagram until the 10.10 sales are over, {sender}.",
+        blocks: [
+          { type: "heading", text: "Budget, until 11 Oct" },
+          { type: "paragraph", text: "75% Meta, 15% TikTok, 10% Google." },
+          { type: "heading", text: "Then" },
+          {
+            type: "paragraph",
+            text: "Back to 60/30/10 once TikTok CPMs drop below IDR 25,000."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "comment-replies",
+    title: "Comment reply drafts",
+    kind: "Replies",
+    versions: [
+      {
+        reply: "Here are replies for the comments we get most, {sender}.",
+        blocks: [
+          { type: "heading", text: "“How much is it?”" },
+          {
+            type: "paragraph",
+            text: "It's coming on 1 Nov and we'll share the price that week. Want a reminder? Join the waitlist in the app."
+          },
+          { type: "heading", text: "“Can I order it for delivery?”" },
+          {
+            type: "paragraph",
+            text: "Yes, from 8 Nov. The first week is in stores and the app only, so the baristas can get it just right."
+          },
+          { type: "heading", text: "“Is it sweet?”" },
+          {
+            type: "paragraph",
+            text: "Lightly sweet, with cinnamon and a hint of palm sugar. Ask for less sugar and the barista will adjust it."
+          },
+          { type: "heading", text: "Flag to the team" },
+          {
+            type: "paragraph",
+            text: "Two comments mention a cold drink at the Dago store. I've passed them to the store manager."
+          }
+        ]
+      },
+      {
+        reply: "Added Bahasa Indonesia versions, {sender}.",
+        blocks: [
+          { type: "heading", text: "“Harganya berapa?”" },
+          {
+            type: "paragraph",
+            text: "Hadir 1 Nov, harganya kami umumkan minggu itu. Mau diingatkan? Gabung waitlist di aplikasi."
+          },
+          { type: "heading", text: "“Bisa pesan antar?”" },
+          {
+            type: "paragraph",
+            text: "Bisa, mulai 8 Nov. Minggu pertama khusus di toko dan aplikasi dulu, ya."
           }
         ]
       }

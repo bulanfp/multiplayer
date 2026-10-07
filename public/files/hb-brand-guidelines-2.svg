@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="794" height="1123" viewBox="0 0 794 1123">
+  <!-- Mock preview of "Brand guidelines 2026.pdf", page 2 -->
+  <rect width="794" height="1123" fill="#FFFFFF"/>
+  <g font-family="Inter, 'Helvetica Neue', Arial, sans-serif">
+    <text x="72" y="110" font-size="16" font-weight="600" fill="#B5562B" letter-spacing="4">02 · COLOUR</text>
+    <text x="72" y="170" font-family="Georgia, 'Times New Roman', serif" font-size="48" font-weight="700" fill="#0F3D2E">Five colours, used warmly</text>
+    <text x="72" y="215" font-size="20" fill="#4B5563">Perk Green leads. Cream gives the room to breathe. Cinnamon and</text>
+    <text x="72" y="245" font-size="20" fill="#4B5563">Honey are for moments, never for whole surfaces.</text>
+
+    <g transform="translate(72 300)">
+      <rect width="650" height="150" rx="16" fill="#0F3D2E"/>
+      <text x="32" y="70" font-size="28" font-weight="700" fill="#F6EBDD">Perk Green</text>
+      <text x="32" y="108" font-size="18" fill="#CFE0D8">#0F3D2E · Logo, headings, store signage</text>
+    </g>
+    <g transform="translate(72 474)">
+      <rect width="650" height="110" rx="16" fill="#F6EBDD" stroke="#E5D6C2"/>
+      <text x="32" y="52" font-size="24" font-weight="700" fill="#2E1810">Cream</text>
+      <text x="32" y="84" font-size="18" fill="#6E351B">#F6EBDD · Backgrounds, cups, menu boards</text>
+    </g>
+    <g transform="translate(72 608)">
+      <rect width="314" height="200" rx="16" fill="#B5562B"/>
+      <text x="28" y="140" font-size="24" font-weight="700" fill="#FFF4E6">Cinnamon</text>
+      <text x="28" y="172" font-size="17" fill="#FBE2D2">#B5562B · Seasonal</text>
+    </g>
+    <g transform="translate(408 608)">
+      <rect width="314" height="200" rx="16" fill="#E3A63B"/>
+      <text x="28" y="140" font-size="24" font-weight="700" fill="#2E1810">Honey</text>
+      <text x="28" y="172" font-size="17" fill="#5C3A08">#E3A63B · Rewards, offers</text>
+    </g>
+    <g transform="translate(72 832)">
+      <rect width="650" height="110" rx="16" fill="#2E1810"/>
+      <text x="32" y="52" font-size="24" font-weight="700" fill="#F6EBDD">Espresso</text>
+      <text x="32" y="84" font-size="18" fill="#D9C2AE">#2E1810 · Body text on cream, never on green</text>
+    </g>
+    <text x="72" y="1060" font-size="14" fill="#9CA3AF">Central Perk brand guidelines 2026 · 2</text>
+  </g>
+</svg>

@@ -1,89 +1,88 @@
 <template>
-  <MpModal id="add-members-modal" :is-open="isOpen" size="md" @close="handleClose">
+  <MpModal
+    id="add-members-modal"
+    :is-open="isOpen"
+    size="md"
+    scroll-behavior="auto"
+    @close="handleClose"
+  >
     <MpModalContent>
       <MpModalHeader>
         {{ title }}
-        <MpModalCloseButton />
+        <MpModalCloseButton is-rounded aria-label="Close" />
       </MpModalHeader>
       <MpModalBody>
         <SearchInput
           id="add-members-search"
           v-model="query"
-          :placeholder="canAddPeople ? 'Search people or agents' : 'Search agents'"
+          placeholder="Search people or agents"
         />
 
-        <section v-if="canAddPeople" :class="css({ mt: '4' })">
-          <MpText size="label-small" weight="semiBold" color="text.secondary" :class="labelClass">
-            People
-          </MpText>
-          <MpFlex direction="column" gap="3">
-            <MpCheckbox
-              v-for="personId in peopleOptions"
-              :id="`add-person-${personId}`"
-              :key="personId"
-              v-model="selectedPeople"
-              :value="personId"
-              :is-disabled="conversation.memberIds.includes(personId)"
+        <section v-for="section in sections" :key="section.kind" :class="css({ mt: '4' })">
+          <SectionLabel :id="`add-members-${section.kind}`" :class="labelClass">
+            {{ section.label }}
+          </SectionLabel>
+          <ul :class="listClass" :aria-labelledby="`add-members-${section.kind}`">
+            <li
+              v-for="option in section.options"
+              :key="option.actor.id"
+              :class="rowClass"
+              :data-member="option.isMember || undefined"
             >
-              <MpFlex alignItems="center" gap="2">
-                <MemberAvatar :actor="{ kind: 'person', id: personId }" size="sm" />
-                <MpText>{{ getPerson(personId)?.name }}</MpText>
-                <MpText color="text.secondary">
-                  {{
-                    conversation.memberIds.includes(personId)
-                      ? "In group"
-                      : getPerson(personId)?.title
-                  }}
-                </MpText>
-              </MpFlex>
-            </MpCheckbox>
-          </MpFlex>
+              <!-- Already in: ticked and locked. A checkbox in a v-model group ignores
+                   is-checked, so these stand on their own. -->
+              <MpCheckbox
+                v-if="option.isMember"
+                :id="`add-${option.actor.kind}-${option.actor.id}`"
+                is-checked
+                is-disabled
+              >
+                <MpFlex alignItems="center" gap="3">
+                  <MemberAvatar :actor="option.actor" />
+                  <MpFlex direction="column" flex="1" minWidth="0">
+                    <MpText weight="semiBold" is-truncated>{{ option.name }}</MpText>
+                    <MpText size="label-small" color="text.secondary" is-truncated>
+                      {{ option.detail }}
+                    </MpText>
+                  </MpFlex>
+                  <MpBadge
+                    for="tableStatus"
+                    type="announcement"
+                    size="sm"
+                    :class="css({ flexShrink: '0' })"
+                  >
+                    In group
+                  </MpBadge>
+                </MpFlex>
+              </MpCheckbox>
+              <MpCheckbox
+                v-else
+                :id="`add-${option.actor.kind}-${option.actor.id}`"
+                v-model="selected[section.kind]"
+                :value="option.actor.id"
+              >
+                <MpFlex alignItems="center" gap="3">
+                  <MemberAvatar :actor="option.actor" />
+                  <MpFlex direction="column" flex="1" minWidth="0">
+                    <MpText weight="semiBold" is-truncated>{{ option.name }}</MpText>
+                    <MpText size="label-small" color="text.secondary" is-truncated>
+                      {{ option.detail }}
+                    </MpText>
+                  </MpFlex>
+                </MpFlex>
+              </MpCheckbox>
+            </li>
+          </ul>
         </section>
 
-        <section :class="css({ mt: '5' })">
-          <MpText size="label-small" weight="semiBold" color="text.secondary" :class="labelClass">
-            Agents
-          </MpText>
-          <MpFlex direction="column" gap="3">
-            <MpCheckbox
-              v-for="agentId in agentOptions"
-              :id="`add-agent-${agentId}`"
-              :key="agentId"
-              v-model="selectedAgents"
-              :value="agentId"
-              :is-disabled="conversation.agentIds.includes(agentId)"
-            >
-              <MpFlex alignItems="center" gap="2">
-                <MemberAvatar :actor="{ kind: 'agent', id: agentId }" size="sm" />
-                <MpText>{{ getAgent(agentId)?.name }}</MpText>
-                <MpText color="text.secondary">
-                  {{
-                    conversation.agentIds.includes(agentId)
-                      ? "Already here"
-                      : getAgent(agentId)?.role
-                  }}
-                </MpText>
-              </MpFlex>
-            </MpCheckbox>
-          </MpFlex>
-        </section>
-
-        <MpText
-          v-if="!peopleOptions.length && !agentOptions.length"
-          color="text.secondary"
-          :class="css({ mt: '4' })"
-        >
+        <MpText v-if="!sections.length" color="text.secondary" :class="css({ mt: '4' })">
           No one in {{ workspace.name }} matches “{{ query.trim() }}”.
-        </MpText>
-        <MpText size="body-small" color="text.secondary" :class="css({ mt: '5' })">
-          Only people and agents in {{ workspace.name }} show up here. Invite new people from the
-          project menu.
         </MpText>
       </MpModalBody>
       <MpModalFooter>
         <MpButtonGroup>
-          <MpButton variant="secondary" @click="handleClose">Cancel</MpButton>
-          <MpButton :is-disabled="!selectionCount" @click="submit">
+          <MpButton is-rounded variant="ghost" @click="handleClose">Cancel</MpButton>
+          <MpButton is-rounded :is-disabled="!selectionCount" @click="submit">
             {{ selectionCount ? `Add (${selectionCount})` : "Add" }}
           </MpButton>
         </MpButtonGroup>
@@ -94,10 +93,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, reactive, ref } from "vue";
 import {
   css,
   toast,
+  MpBadge,
   MpButton,
   MpButtonGroup,
   MpCheckbox,
@@ -112,16 +112,28 @@ import {
   MpText
 } from "@mekari/pixel3";
 import SearchInput from "~/components/chat/SearchInput.vue";
+import SectionLabel from "~/components/layout/SectionLabel.vue";
 import MemberAvatar from "~/components/shared/MemberAvatar.vue";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 import { getAgent } from "~/data/agents";
-import { getPerson } from "~/data/people";
-import type { Conversation, Workspace } from "~/data/types";
+import { CURRENT_USER_ID, getPerson } from "~/data/people";
+import type { Actor, ActorKind, Agent, Conversation, Person, Workspace } from "~/data/types";
 
 interface AddMembersModalProps {
   isOpen: boolean;
   conversation: Conversation;
   workspace: Workspace;
+}
+
+/** One row in the list: someone at the company, or an agent, who could join this group. */
+interface MemberOption {
+  actor: Actor;
+  /** The current user reads "Rizal Candra (you)" */
+  name: string;
+  /** Job title for people, role for agents */
+  detail: string;
+  /** Already in: shown checked and locked, with a status badge */
+  isMember: boolean;
 }
 
 const props = defineProps<AddMembersModalProps>();
@@ -130,38 +142,58 @@ const emit = defineEmits<{ close: [] }>();
 const { addMembers, conversationTitle } = useWorkspaceStore();
 
 const query = ref("");
-const selectedPeople = ref<string[]>([]);
-const selectedAgents = ref<string[]>([]);
+const selected = reactive<Record<ActorKind, string[]>>({ person: [], agent: [] });
 
-// DMs stay between two people; only agents can join them.
-const canAddPeople = computed(() => props.conversation.kind === "channel");
 const title = computed(() => `Add to ${conversationTitle(props.conversation)}`);
-const selectionCount = computed(() => selectedPeople.value.length + selectedAgents.value.length);
+const selectionCount = computed(() => selected.person.length + selected.agent.length);
 
-function matches(name: string | undefined): boolean {
+function matches(name: string): boolean {
   const needle = query.value.trim().toLowerCase();
-  return !needle || Boolean(name?.toLowerCase().includes(needle));
+  return !needle || name.toLowerCase().includes(needle);
 }
 
 const peopleOptions = computed(() =>
   props.workspace.members
-    .map((member) => member.personId)
-    .filter((id) => matches(getPerson(id)?.name))
+    .map((member) => getPerson(member.personId))
+    .filter((person): person is Person => person !== undefined && matches(person.name))
+    .map((person): MemberOption => ({
+      actor: { kind: "person", id: person.id },
+      name: person.id === CURRENT_USER_ID ? `${person.name} (you)` : person.name,
+      detail: person.title,
+      isMember: props.conversation.memberIds.includes(person.id)
+    }))
 );
+
 const agentOptions = computed(() =>
-  props.workspace.agentIds.filter((id) => matches(getAgent(id)?.name))
+  props.workspace.agentIds
+    .map((id) => getAgent(id))
+    .filter((agent): agent is Agent => agent !== undefined && matches(agent.name))
+    .map((agent): MemberOption => ({
+      actor: { kind: "agent", id: agent.id },
+      name: agent.name,
+      detail: agent.role,
+      isMember: props.conversation.agentIds.includes(agent.id)
+    }))
+);
+
+// A section drops out when the search leaves it empty.
+const sections = computed(() =>
+  [
+    { kind: "person" as const, label: "People", options: peopleOptions.value },
+    { kind: "agent" as const, label: "Agents", options: agentOptions.value }
+  ].filter((section) => section.options.length)
 );
 
 function handleClose() {
   query.value = "";
-  selectedPeople.value = [];
-  selectedAgents.value = [];
+  selected.person = [];
+  selected.agent = [];
   emit("close");
 }
 
 function submit() {
   const count = selectionCount.value;
-  addMembers(props.conversation, selectedPeople.value, selectedAgents.value);
+  addMembers(props.conversation, selected.person, selected.agent);
   toast.notify({
     title: `Added ${count} to ${conversationTitle(props.conversation)}`,
     variant: "success"
@@ -169,10 +201,17 @@ function submit() {
   handleClose();
 }
 
-const labelClass = css({
-  display: "block",
-  textTransform: "uppercase",
-  letterSpacing: "0.1em",
-  mb: "2"
+// SectionLabel is inset like the rows, so it already lines up with the checkboxes.
+const labelClass = css({ mb: "1" });
+
+const listClass = css({ display: "flex", flexDirection: "column", gap: "0.5" });
+
+// The whole row is the checkbox label. MpCheckbox hands its class to the hidden input,
+// so the label is stretched from here.
+const rowClass = css({
+  rounded: "md",
+  "&:not([data-member])": { _hover: { bg: "background.neutral.hovered" } },
+  "& > label": { w: "full", px: "2", py: "2" },
+  "& .mp-checkbox__label": { flex: "1", minW: "0" }
 });
 </script>

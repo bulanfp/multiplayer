@@ -6,6 +6,8 @@ export interface RailItem {
   section: RailSection;
   label: string;
   icon: IconName;
+  /** For icons Pixel has no fill variant of, like Airene's mark */
+  activeIcon?: IconName;
 }
 
 // Activity and Todos are hidden for now; their pages still work at /w/[workspaceId]/activity
@@ -13,5 +15,5 @@ export interface RailItem {
 export const RAIL_ITEMS: RailItem[] = [
   { section: "home", label: "Chats", icon: "chat" },
   { section: "library", label: "Library", icon: "folder-close" },
-  { section: "agents", label: "Agents", icon: "ai-assist" }
+  { section: "agents", label: "Agents", icon: "airene-outline", activeIcon: "airene-black" }
 ];

@@ -1,13 +1,27 @@
 import { reactive } from "vue";
+import { agentIntro } from "~/data/agent-intros";
+import type { AgentConsult } from "~/data/agent-scripts";
 import { getAgent } from "~/data/agents";
 import { CURRENT_USER_ID, getPerson } from "~/data/people";
 import { SEED } from "~/data/seed";
-import type { LibraryFile, Mention, Message, Output } from "~/data/types";
+import type { LibraryFile, Message, MessageDraft, Output } from "~/data/types";
 import { useActivityStore } from "~/composables/useActivityStore";
 import { useTodoStore } from "~/composables/useTodoStore";
-import { pickAgentReply, pickOutputReply, type PickedReply } from "~/utils/agent-replies";
+import {
+  pickAgentReply,
+  pickConsultReply,
+  pickOutputReply,
+  type PickedReply
+} from "~/utils/agent-replies";
 import { createId } from "~/utils/ids";
-import { fillReply, type Mentionable } from "~/utils/mentions";
+import {
+  fillReply,
+  joinRich,
+  mentionList,
+  withoutMentions,
+  type Mentionable,
+  type RichText
+} from "~/utils/mentions";
 
 const REPLY_DELAY_MS = 1500;
 const EXTRA_AGENT_DELAY_MS = 900;
@@ -19,12 +33,17 @@ const state = reactive({
   unread: { ...SEED.unread } as Record<string, number>,
   /** Agent ids currently "writing" per thread */
   typing: {} as Record<string, string[]>,
+  /** Outputs shared from an agent chat, waiting in a group's message box until you send */
+  shareDrafts: new Map<string, { outputId: string; version: number }>(),
   /** The conversation on screen; replies elsewhere count as unread */
   activeThreadId: null as string | null
 });
 
 // Timers live outside reactive state so they never leak into the UI or survive a reload.
 const pendingReplies = new Map<string, ReturnType<typeof setTimeout>>();
+// Hellos still waiting, keyed like pendingReplies, so an early @mention can post its agent's
+// hello first instead of being dropped.
+const pendingIntros = new Map<string, () => void>();
 
 const { addActivity } = useActivityStore();
 const { addTodo } = useTodoStore();
@@ -35,7 +54,10 @@ export interface SendContext {
   threadId: string;
   /** Agents that are members and may answer */
   agentIds: string[];
-  /** Agent chats answer every message, no mention needed */
+  /**
+   * An agent chat's agent: it answers every message, and checks with any other agent you
+   * @mention first. Groups have none: agents there answer when @mentioned.
+   */
   replyAgentId?: string;
 }
 
@@ -59,6 +81,10 @@ function outputsFor(workspaceId: string): Output[] {
 
 function filesFor(workspaceId: string): LibraryFile[] {
   return state.files.filter((file) => file.workspaceId === workspaceId);
+}
+
+function getFile(id: string): LibraryFile | undefined {
+  return state.files.find((file) => file.id === id);
 }
 
 function unreadCount(threadId: string): number {
@@ -101,12 +127,6 @@ function setTyping(threadId: string, agentId: string, isTyping: boolean): void {
     : current.filter((id) => id !== agentId);
 }
 
-function stripMentions(text: string, mentions: Mention[]): string {
-  return [...mentions]
-    .sort((a, b) => b.start - a.start)
-    .reduce((result, mention) => result.slice(0, mention.start) + result.slice(mention.end), text);
-}
-
 function outputsIn(threadId: string): Output[] {
   return state.outputs.filter((output) => output.threadId === threadId);
 }
@@ -117,49 +137,52 @@ function versionCountIn(threadId: string, templateKey: string): number {
   );
 }
 
-function postAgentReply(context: SendContext, agentId: string, trigger: Message): void {
-  const picked = pickAgentReply(
-    context.workspaceId,
-    agentId,
-    stripMentions(trigger.text, trigger.mentions),
-    (templateKey) => versionCountIn(context.threadId, templateKey)
-  );
-  deliverReply(context, agentId, picked, trigger.sender.id);
+function agentMentionable(agentId: string): Mentionable {
+  return { kind: "agent", id: agentId, name: getAgent(agentId)?.name ?? agentId };
+}
+
+/**
+ * Who a reply @mentions: the person who asked in a group. In an agent chat the asker is the
+ * only reader, so the reply doesn't mention them.
+ */
+function askerFor(context: SendContext, personId: string): Mentionable | undefined {
+  const person = context.replyAgentId ? undefined : getPerson(personId);
+  return person ? { kind: "person", id: person.id, name: person.name } : undefined;
+}
+
+/** Adds an agent's message; it counts as unread unless you're looking at the conversation. */
+function pushAgentMessage(context: SendContext, message: Message): void {
+  state.messages.push(message);
+  if (state.activeThreadId !== context.threadId) {
+    state.unread[context.threadId] = unreadCount(context.threadId) + 1;
+  }
 }
 
 /**
  * Posts an agent's reply: a question with options, an output (new or next version), or
- * plain text. `prefix` leads the text, e.g. acknowledging the option someone picked.
+ * plain text. `prefix` leads the text, e.g. thanking the agents it checked with.
+ * `consultedBy` marks a reply written because another agent asked.
  */
 function deliverReply(
   context: SendContext,
   agentId: string,
   picked: PickedReply,
-  askerId: string,
-  prefix = ""
+  asker: Mentionable | undefined,
+  { prefix = "", consultedBy }: { prefix?: string | RichText; consultedBy?: string } = {}
 ): void {
   const outputsHere = outputsIn(context.threadId);
-
-  // In a 1:1 agent chat the asker is the only reader, so the reply doesn't @mention them.
-  const asker = context.replyAgentId ? undefined : getPerson(askerId);
-  const sender: Mentionable | undefined = asker
-    ? { kind: "person", id: asker.id, name: asker.name }
-    : undefined;
   // Anything that lands in the thread you're looking at is already seen.
   const isViewing = state.activeThreadId === context.threadId;
-  const filled = fillReply(picked.reply, sender, picked.title);
+  const content = joinRich(prefix, fillReply(picked.reply, asker, picked.title));
   const now = new Date().toISOString();
   const message: Message = {
     id: createId("msg"),
     threadId: context.threadId,
     kind: "message",
     sender: { kind: "agent", id: agentId },
-    text: prefix + filled.text,
-    mentions: filled.mentions.map((mention) => ({
-      ...mention,
-      start: mention.start + prefix.length,
-      end: mention.end + prefix.length
-    })),
+    text: content.text,
+    mentions: content.mentions,
+    consultedBy,
     createdAt: now
   };
 
@@ -228,15 +251,28 @@ function deliverReply(
     });
   }
 
-  state.messages.push(message);
-  if (!isViewing) {
-    state.unread[context.threadId] = unreadCount(context.threadId) + 1;
-  }
+  pushAgentMessage(context, message);
 }
 
-/** Shows "<agent> is writing…", then runs `reply` after the agent's turn delay. */
-function scheduleReply(context: SendContext, agentId: string, order: number, reply: () => void) {
-  const key = `${context.threadId}:${agentId}`;
+/**
+ * Shows "<agent> is writing…", then runs `reply` after the agent's turn delay. `step` keeps
+ * an agent's part in someone else's consult apart from its own reply in the same thread.
+ */
+function scheduleReply(
+  context: SendContext,
+  agentId: string,
+  order: number,
+  reply: () => void,
+  step?: string
+) {
+  const key = step ? `${context.threadId}:${agentId}:${step}` : `${context.threadId}:${agentId}`;
+  // @mentioned before its hello landed: it says hello now, then answers as usual.
+  const intro = step ? undefined : pendingIntros.get(key);
+  if (intro) {
+    clearTimeout(pendingReplies.get(key));
+    pendingReplies.delete(key);
+    intro();
+  }
   if (pendingReplies.has(key) || !getAgent(agentId)) return;
 
   setTyping(context.threadId, agentId, true);
@@ -249,6 +285,77 @@ function scheduleReply(context: SendContext, agentId: string, order: number, rep
     REPLY_DELAY_MS + order * EXTRA_AGENT_DELAY_MS
   );
   pendingReplies.set(key, timer);
+}
+
+/**
+ * An agent answers a message. If its script, or you in an agent chat, brings in other agents,
+ * it says who it's checking with, each of them answers in turn (in full, marked as
+ * consulted), and then it replies with what it learned.
+ */
+function respond(
+  context: SendContext,
+  agentId: string,
+  trigger: Message,
+  mentioned: string[],
+  order: number
+): void {
+  const text = withoutMentions(trigger.text, trigger.mentions);
+  const versionCount = (templateKey: string) => versionCountIn(context.threadId, templateKey);
+  const asker = askerFor(context, trigger.sender.id);
+  const picked = pickAgentReply(agentId, text, versionCount);
+
+  const scripted = picked.consult ?? [];
+  const helpers: AgentConsult[] = [
+    ...scripted,
+    ...mentioned
+      .filter((id) => !scripted.some((consult) => consult.agentId === id))
+      .map((id) => ({ agentId: id }))
+  ].filter((consult) => consult.agentId !== agentId && getAgent(consult.agentId));
+
+  if (!helpers.length) {
+    scheduleReply(context, agentId, order, () => deliverReply(context, agentId, picked, asker));
+    return;
+  }
+
+  const names = mentionList(helpers.map((helper) => agentMentionable(helper.agentId)));
+  scheduleReply(context, agentId, order, () => {
+    deliverReply(context, agentId, { reply: "" }, undefined, {
+      prefix: joinRich("Let me check with ", names, ".")
+    });
+    helpers.forEach((helper, index) =>
+      scheduleReply(
+        context,
+        helper.agentId,
+        index,
+        () => {
+          deliverReply(
+            context,
+            helper.agentId,
+            pickConsultReply(helper, text, versionCount),
+            agentMentionable(agentId),
+            { consultedBy: agentId }
+          );
+          if (index < helpers.length - 1) return;
+          // Everyone has answered: the agent replies, starting from what they said.
+          scheduleReply(
+            context,
+            agentId,
+            0,
+            () =>
+              deliverReply(
+                context,
+                agentId,
+                { ...pickAgentReply(agentId, text, versionCount), consult: undefined },
+                asker,
+                { prefix: joinRich("Thanks, ", names, ". ") }
+              ),
+            "consult"
+          );
+        },
+        `consult-${agentId}`
+      )
+    );
+  });
 }
 
 /**
@@ -279,13 +386,68 @@ function pickOption(context: SendContext, messageId: string, optionId: string): 
       context,
       agentId,
       pickOutputReply(choice.outputKey, versionCountIn(context.threadId, choice.outputKey)),
-      CURRENT_USER_ID,
-      `Going with “${option.label}”. `
+      askerFor(context, CURRENT_USER_ID),
+      { prefix: `Going with “${option.label}”. ` }
     )
   );
 }
 
-function sendMessage(context: SendContext, text: string, mentions: Mention[]): void {
+/** An agent's hello, @mentioning whoever added it. Unread like any reply if you've moved on. */
+function postIntro(context: SendContext, agentId: string, addedBy: string): void {
+  const adder = getPerson(addedBy);
+  const filled = fillReply(
+    agentIntro(agentId),
+    adder ? { kind: "person", id: adder.id, name: adder.name } : undefined,
+    ""
+  );
+  pushAgentMessage(context, {
+    id: createId("msg"),
+    threadId: context.threadId,
+    kind: "message",
+    sender: { kind: "agent", id: agentId },
+    text: filled.text,
+    mentions: filled.mentions,
+    intro: true,
+    createdAt: new Date().toISOString()
+  });
+}
+
+/**
+ * Agents just added to a group say hello one after another, each "writing…" first like a
+ * reply, so the group sees who joined and what to @mention them for.
+ */
+function introduceAgents(context: SendContext, agentIds: string[], addedBy: string): void {
+  agentIds.forEach((agentId, order) => {
+    const key = `${context.threadId}:${agentId}`;
+    const wasBusy = pendingReplies.has(key);
+    const post = () => {
+      pendingIntros.delete(key);
+      postIntro(context, agentId, addedBy);
+    };
+    scheduleReply(context, agentId, order, post);
+    if (!wasBusy && pendingReplies.has(key)) pendingIntros.set(key, post);
+  });
+}
+
+function sendMessage(context: SendContext, draft: MessageDraft): void {
+  const { text, mentions, attachments } = draft;
+  const now = new Date().toISOString();
+  // Attachments are kept as Library files, so they show up under Files too.
+  const fileIds = attachments.map((attachment) => {
+    const file: LibraryFile = {
+      id: createId("file"),
+      workspaceId: context.workspaceId,
+      name: attachment.name,
+      type: attachment.type,
+      size: attachment.size,
+      threadId: context.threadId,
+      uploadedBy: CURRENT_USER_ID,
+      uploadedAt: now,
+      previewUrl: attachment.previewUrl
+    };
+    state.files.push(file);
+    return file.id;
+  });
   const message: Message = {
     id: createId("msg"),
     threadId: context.threadId,
@@ -293,22 +455,64 @@ function sendMessage(context: SendContext, text: string, mentions: Mention[]): v
     sender: { kind: "person", id: CURRENT_USER_ID },
     text,
     mentions,
-    createdAt: new Date().toISOString()
+    output: draft.output,
+    fileIds: fileIds.length ? fileIds : undefined,
+    createdAt: now
   };
   state.messages.push(message);
 
-  const mentionedAgents = mentions
-    .filter((mention) => mention.kind === "agent" && context.agentIds.includes(mention.id))
-    .map((mention) => mention.id);
-  const responders = context.replyAgentId ? [context.replyAgentId] : [...new Set(mentionedAgents)];
-  responders.forEach((agentId, order) =>
-    scheduleReply(context, agentId, order, () => postAgentReply(context, agentId, message))
-  );
+  // A shared output now lives here too, so the Library lists it from this conversation.
+  const shared = draft.output && getOutput(draft.output.outputId);
+  if (shared && shared.threadId !== context.threadId) {
+    shared.sharedThreadIds = [...new Set([...(shared.sharedThreadIds ?? []), context.threadId])];
+  }
+  state.shareDrafts.delete(context.threadId);
+
+  const mentionedAgents = [
+    ...new Set(mentions.filter((mention) => mention.kind === "agent").map((mention) => mention.id))
+  ];
+  // An agent chat's agent answers everything, checking with anyone you mention first.
+  // In a group, each agent you mention answers.
+  if (context.replyAgentId) {
+    respond(context, context.replyAgentId, message, mentionedAgents, 0);
+    return;
+  }
+  mentionedAgents
+    .filter((agentId) => context.agentIds.includes(agentId))
+    .forEach((agentId, order) => respond(context, agentId, message, [], order));
+}
+
+/**
+ * Shares an output from one of your agent chats: it waits in the group's message box,
+ * quoted, so you can say what it's for before you send it.
+ */
+function startShare(threadId: string, outputId: string, version: number): void {
+  state.shareDrafts.set(threadId, { outputId, version });
+}
+
+function shareDraftFor(threadId: string): { outputId: string; version: number } | undefined {
+  return state.shareDrafts.get(threadId);
+}
+
+function clearShareDraft(threadId: string): void {
+  state.shareDrafts.delete(threadId);
+}
+
+/** "Stop generating": drops the replies still being written in a conversation. */
+function stopReplies(threadId: string): void {
+  pendingReplies.forEach((timer, key) => {
+    if (!key.startsWith(`${threadId}:`)) return;
+    clearTimeout(timer);
+    pendingReplies.delete(key);
+    pendingIntros.delete(key);
+  });
+  state.typing[threadId] = [];
 }
 
 function cancelPendingReplies(): void {
   pendingReplies.forEach((timer) => clearTimeout(timer));
   pendingReplies.clear();
+  pendingIntros.clear();
   state.typing = {};
 }
 
@@ -321,13 +525,19 @@ export function useChatStore() {
     getOutput,
     outputsFor,
     filesFor,
+    getFile,
     unreadCount,
     typingIn,
     setActiveThread,
     leaveThread,
     postSystemMessage,
+    introduceAgents,
     sendMessage,
     pickOption,
+    startShare,
+    shareDraftFor,
+    clearShareDraft,
+    stopReplies,
     cancelPendingReplies
   };
 }

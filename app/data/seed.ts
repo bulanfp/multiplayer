@@ -1,15 +1,12 @@
 import { AGENTS } from "~/data/agents";
+import { CENTRAL_PERK } from "~/data/central-perk";
 import { OUTPUT_TEMPLATES } from "~/data/output-templates";
 import { PEOPLE } from "~/data/people";
-import { outputId, type ProjectSeed } from "~/data/project-seed";
-import { HOLIDAY_BLEND_LAUNCH } from "~/data/projects/holiday-blend-launch";
-import { MOBILE_ORDERING_APP } from "~/data/projects/mobile-ordering-app";
-import type { Message, Output } from "~/data/types";
+import { outputId, type WorkspaceSeed } from "~/data/seed-helpers";
+import type { Mention, Message, Output } from "~/data/types";
 import { fillReply, parseMentions, type Mentionable } from "~/utils/mentions";
 
-// Turns the readable project files into the records the stores start from.
-
-const PROJECTS: ProjectSeed[] = [MOBILE_ORDERING_APP, HOLIDAY_BLEND_LAUNCH];
+// Turns the readable mock content into the records the stores start from.
 
 const DIRECTORY: Mentionable[] = [
   ...PEOPLE.map((person) => ({ kind: "person" as const, id: person.id, name: person.name })),
@@ -18,11 +15,22 @@ const DIRECTORY: Mentionable[] = [
 
 const AGENT_IDS = new Set(AGENTS.map((agent) => agent.id));
 
-function buildThreads(project: ProjectSeed): { messages: Message[]; outputs: Output[] } {
+/** Moves mentions found in a reply along by the length of the text put in front of it. */
+function shift(mentions: Mention[], by: number): Mention[] {
+  return mentions.map((mention) => ({
+    ...mention,
+    start: mention.start + by,
+    end: mention.end + by
+  }));
+}
+
+function buildThreads(seed: WorkspaceSeed): { messages: Message[]; outputs: Output[] } {
   const messages: Message[] = [];
   const outputs: Output[] = [];
+  /** Outputs shared from agent chats; applied once every thread is built */
+  const shares: { outputId: string; threadId: string }[] = [];
 
-  for (const [threadId, entries] of Object.entries(project.threads)) {
+  for (const [threadId, entries] of Object.entries(seed.threads)) {
     entries.forEach((entry, index) => {
       const id = `msg-${threadId}-${index}`;
       if (!entry.from) {
@@ -42,6 +50,22 @@ function buildThreads(project: ProjectSeed): { messages: Message[]; outputs: Out
         kind: AGENT_IDS.has(entry.from) ? "agent" : "person",
         id: entry.from
       } as const;
+
+      if (entry.shared) {
+        const sharedId = outputId(entry.shared.threadId, entry.shared.output);
+        shares.push({ outputId: sharedId, threadId });
+        messages.push({
+          id,
+          threadId,
+          kind: "message",
+          sender,
+          text: entry.text ?? "",
+          mentions: parseMentions(entry.text ?? "", DIRECTORY),
+          output: { outputId: sharedId, version: entry.shared.version ?? 1 },
+          createdAt: entry.at
+        });
+        return;
+      }
       const template = entry.output ? OUTPUT_TEMPLATES[entry.output] : undefined;
 
       // The same output asked for again in a thread becomes its next version.
@@ -55,7 +79,7 @@ function buildThreads(project: ProjectSeed): { messages: Message[]; outputs: Out
         const prefix = entry.prefix ?? "";
         const output = existing ?? {
           id: outputRef,
-          workspaceId: project.workspace.id,
+          workspaceId: seed.workspace.id,
           threadId,
           templateKey: template.key,
           title: template.title,
@@ -70,12 +94,9 @@ function buildThreads(project: ProjectSeed): { messages: Message[]; outputs: Out
           kind: "message",
           sender,
           text: prefix + reply.text,
-          mentions: reply.mentions.map((mention) => ({
-            ...mention,
-            start: mention.start + prefix.length,
-            end: mention.end + prefix.length
-          })),
+          mentions: [...parseMentions(prefix, DIRECTORY), ...shift(reply.mentions, prefix.length)],
           output: { outputId: outputRef, version: output.versions.length },
+          consultedBy: entry.consultedBy,
           createdAt: entry.at
         });
         return;
@@ -103,22 +124,27 @@ function buildThreads(project: ProjectSeed): { messages: Message[]; outputs: Out
                 pickedBy: picked?.by
               }
             : undefined,
+        consultedBy: entry.consultedBy,
         createdAt: entry.at
       });
     });
   }
+  shares.forEach(({ outputId: id, threadId }) => {
+    const output = outputs.find((item) => item.id === id);
+    if (output) output.sharedThreadIds = [...(output.sharedThreadIds ?? []), threadId];
+  });
   return { messages, outputs };
 }
 
-const built = PROJECTS.map(buildThreads);
+const built = buildThreads(CENTRAL_PERK);
 
 export const SEED = {
-  workspaces: PROJECTS.map((project) => project.workspace),
-  conversations: PROJECTS.flatMap((project) => project.conversations),
-  messages: built.flatMap((item) => item.messages),
-  outputs: built.flatMap((item) => item.outputs),
-  unread: Object.assign({}, ...PROJECTS.map((project) => project.unread)) as Record<string, number>,
-  files: PROJECTS.flatMap((project) => project.files),
-  todos: PROJECTS.flatMap((project) => project.todos),
-  activity: PROJECTS.flatMap((project) => project.activity)
+  workspaces: [CENTRAL_PERK.workspace],
+  conversations: CENTRAL_PERK.conversations,
+  messages: built.messages,
+  outputs: built.outputs,
+  unread: { ...CENTRAL_PERK.unread },
+  files: CENTRAL_PERK.files,
+  todos: CENTRAL_PERK.todos,
+  activity: CENTRAL_PERK.activity
 };

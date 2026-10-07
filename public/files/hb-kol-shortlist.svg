@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1123" height="794" viewBox="0 0 1123 794">
+  <!-- Mock preview of "KOL shortlist.pdf" -->
+  <rect width="1123" height="794" fill="#FFFFFF"/>
+  <g font-family="Inter, 'Helvetica Neue', Arial, sans-serif">
+    <text x="64" y="92" font-size="34" font-weight="700" fill="#111827">KOL shortlist · Holiday Blend launch</text>
+    <text x="64" y="128" font-size="18" fill="#6B7280">Week 2 shoot · prepared by Kevin Tan · rates in IDR per post</text>
+
+    <rect x="64" y="166" width="995" height="52" rx="8" fill="#F3F4F6"/>
+    <g font-size="16" font-weight="600" fill="#374151">
+      <text x="88" y="198">Creator</text>
+      <text x="340" y="198">Niche</text>
+      <text x="500" y="198">Followers</text>
+      <text x="650" y="198">Engagement</text>
+      <text x="810" y="198">Rate</text>
+      <text x="950" y="198">Status</text>
+    </g>
+
+    <g font-size="17" fill="#111827">
+      <text x="88" y="262">@kopipagi.id</text>
+      <text x="340" y="262">Coffee</text>
+      <text x="500" y="262">182K</text>
+      <text x="650" y="262">4.1%</text>
+      <text x="810" y="262">12.000.000</text>
+      <line x1="64" y1="290" x2="1059" y2="290" stroke="#E5E7EB"/>
+      <text x="88" y="330">@santai.sore</text>
+      <text x="340" y="330">Lifestyle</text>
+      <text x="500" y="330">96K</text>
+      <text x="650" y="330">5.3%</text>
+      <text x="810" y="330">7.500.000</text>
+      <line x1="64" y1="358" x2="1059" y2="358" stroke="#E5E7EB"/>
+      <text x="88" y="398">@jktfoodtrail</text>
+      <text x="340" y="398">Food</text>
+      <text x="500" y="398">240K</text>
+      <text x="650" y="398">3.2%</text>
+      <text x="810" y="398">15.000.000</text>
+      <line x1="64" y1="426" x2="1059" y2="426" stroke="#E5E7EB"/>
+      <text x="88" y="466">@baristadiary</text>
+      <text x="340" y="466">Coffee</text>
+      <text x="500" y="466">58K</text>
+      <text x="650" y="466">6.8%</text>
+      <text x="810" y="466">5.000.000</text>
+      <line x1="64" y1="494" x2="1059" y2="494" stroke="#E5E7EB"/>
+      <text x="88" y="534">@weekendbrew</text>
+      <text x="340" y="534">Lifestyle</text>
+      <text x="500" y="534">130K</text>
+      <text x="650" y="534">3.9%</text>
+      <text x="810" y="534">9.000.000</text>
+      <line x1="64" y1="562" x2="1059" y2="562" stroke="#E5E7EB"/>
+    </g>
+
+    <g font-size="14" font-weight="600">
+      <rect x="944" y="243" width="98" height="28" rx="14" fill="#E7F5EE"/><text x="993" y="262" text-anchor="middle" fill="#1C8459">Confirmed</text>
+      <rect x="944" y="311" width="98" height="28" rx="14" fill="#E7F5EE"/><text x="993" y="330" text-anchor="middle" fill="#1C8459">Confirmed</text>
+      <rect x="944" y="379" width="98" height="28" rx="14" fill="#E7F5EE"/><text x="993" y="398" text-anchor="middle" fill="#1C8459">Confirmed</text>
+      <rect x="944" y="447" width="98" height="28" rx="14" fill="#FEF3C7"/><text x="993" y="466" text-anchor="middle" fill="#956400">Waiting</text>
+      <rect x="944" y="515" width="98" height="28" rx="14" fill="#FEF3C7"/><text x="993" y="534" text-anchor="middle" fill="#956400">Waiting</text>
+    </g>
+
+    <text x="64" y="632" font-size="17" font-weight="600" fill="#111827">Total for confirmed creators: IDR 34.500.000 of the IDR 45.000.000 KOL budget</text>
+    <text x="64" y="666" font-size="16" fill="#6B7280">Shoot on Thursday, props prepped on Wednesday. Contracts over IDR 50 million go to legal first.</text>
+  </g>
+</svg>

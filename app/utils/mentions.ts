@@ -123,3 +123,52 @@ export function fillReply(
   }
   return { text: sender ? text : tidyWithoutSender(text), mentions };
 }
+
+/** Text that carries its own @mentions, so pieces can be joined without losing them. */
+export interface RichText {
+  text: string;
+  mentions: Mention[];
+}
+
+/** Joins plain and mention-carrying pieces into one text, shifting each piece's mentions. */
+export function joinRich(...parts: (string | RichText)[]): RichText {
+  return parts.reduce<RichText>(
+    (result, part) => {
+      const piece = typeof part === "string" ? { text: part, mentions: [] } : part;
+      const offset = result.text.length;
+      return {
+        text: result.text + piece.text,
+        mentions: [
+          ...result.mentions,
+          ...piece.mentions.map((mention) => ({
+            ...mention,
+            start: mention.start + offset,
+            end: mention.end + offset
+          }))
+        ]
+      };
+    },
+    { text: "", mentions: [] }
+  );
+}
+
+/** "@Copywriter, @Social media planner and @Campaign analyst", each name a mention. */
+export function mentionList(items: Mentionable[]): RichText {
+  return joinRich(
+    ...items.flatMap((item, index) => {
+      const separator = index === 0 ? "" : index === items.length - 1 ? " and " : ", ";
+      const mention: RichText = {
+        text: `@${item.name}`,
+        mentions: [{ kind: item.kind, id: item.id, start: 0, end: item.name.length + 1 }]
+      };
+      return [separator, mention];
+    })
+  );
+}
+
+/** The text with its @mentions cut out, e.g. so agent names don't trigger reply keywords. */
+export function withoutMentions(text: string, mentions: Mention[]): string {
+  return [...mentions]
+    .sort((a, b) => b.start - a.start)
+    .reduce((result, mention) => result.slice(0, mention.start) + result.slice(mention.end), text);
+}

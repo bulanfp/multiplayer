@@ -1,20 +1,20 @@
 import { reactive } from "vue";
-import { getAgent } from "~/data/agents";
+import { AIRENE_ID, getAgent } from "~/data/agents";
 import { CURRENT_USER_ID, getPerson } from "~/data/people";
 import { SEED } from "~/data/seed";
-import type { Conversation, Invite, Workspace, WorkspaceRole } from "~/data/types";
+import type { Agent, Conversation, MessageDraft, Workspace } from "~/data/types";
 import { useChatStore } from "~/composables/useChatStore";
 import { toSlug } from "~/utils/group-name";
 import { createId } from "~/utils/ids";
-import { conversationPath, workspacePath } from "~/utils/paths";
+import { withoutMentions } from "~/utils/mentions";
+import { agentChatPath } from "~/utils/paths";
 
 const state = reactive({
   workspaces: structuredClone(SEED.workspaces) as Workspace[],
-  conversations: structuredClone(SEED.conversations) as Conversation[],
-  lastWorkspaceId: SEED.workspaces[0]?.id ?? ""
+  conversations: structuredClone(SEED.conversations) as Conversation[]
 });
 
-const { postSystemMessage, lastMessageAt, unreadCount } = useChatStore();
+const { postSystemMessage, introduceAgents, unreadCount, lastMessageAt } = useChatStore();
 
 const ME = getPerson(CURRENT_USER_ID)?.name ?? "You";
 
@@ -25,19 +25,37 @@ function listNames(names: string[]): string {
 
 // ─── Getters ────────────────────────────────────────────────────────────────
 
-function myWorkspaces(): Workspace[] {
-  return state.workspaces.filter((workspace) =>
-    workspace.members.some((member) => member.personId === CURRENT_USER_ID)
-  );
+/** The company's one space; there are no projects to pick from. */
+function defaultWorkspace(): Workspace | undefined {
+  return state.workspaces[0];
 }
 
 function getWorkspace(id: string): Workspace | undefined {
   return state.workspaces.find((workspace) => workspace.id === id);
 }
 
+/** A group by its URL slug. */
 function getConversation(workspaceId: string, slug: string): Conversation | undefined {
   return state.conversations.find(
-    (conversation) => conversation.workspaceId === workspaceId && conversation.slug === slug
+    (conversation) =>
+      conversation.workspaceId === workspaceId &&
+      conversation.kind === "channel" &&
+      conversation.slug === slug
+  );
+}
+
+/** One of your chats with an agent, by its URL slug. */
+function getAgentChat(
+  workspaceId: string,
+  agentId: string,
+  slug: string
+): Conversation | undefined {
+  return state.conversations.find(
+    (conversation) =>
+      conversation.workspaceId === workspaceId &&
+      conversation.kind === "agent" &&
+      conversation.agentIds[0] === agentId &&
+      conversation.slug === slug
   );
 }
 
@@ -49,6 +67,7 @@ function isMember(conversation: Conversation): boolean {
   return conversation.memberIds.includes(CURRENT_USER_ID);
 }
 
+/** Every group, by name. */
 function channelsIn(workspaceId: string): Conversation[] {
   return state.conversations
     .filter((item) => item.workspaceId === workspaceId && item.kind === "channel")
@@ -59,72 +78,69 @@ function joinedChannelsIn(workspaceId: string): Conversation[] {
   return channelsIn(workspaceId).filter(isMember);
 }
 
-function dmsIn(workspaceId: string): Conversation[] {
-  return state.conversations.filter(
-    (item) => item.workspaceId === workspaceId && item.kind === "dm" && isMember(item)
-  );
+function lastActivity(conversation: Conversation): string {
+  return lastMessageAt(conversation.id) ?? conversation.createdAt;
+}
+
+/** All your private chats with agents, newest activity first. */
+function agentChatsIn(workspaceId: string): Conversation[] {
+  return state.conversations
+    .filter((item) => item.workspaceId === workspaceId && item.kind === "agent" && isMember(item))
+    .sort((a, b) => lastActivity(b).localeCompare(lastActivity(a)));
+}
+
+/** Your chats with one agent, newest activity first. */
+function chatsWith(workspaceId: string, agentId: string): Conversation[] {
+  return agentChatsIn(workspaceId).filter((chat) => chat.agentIds[0] === agentId);
 }
 
 /**
- * Your newest chat with each agent, so agents sit in Direct messages next to people.
- * Empty "New chat"s are skipped.
+ * The agents in the sidebar under Airene: the ones you have chats with, the one you talked
+ * to most recently first. Each shows once, however many chats you have with it.
  */
-function agentDmsIn(workspaceId: string): Conversation[] {
-  const latest = new Map<string, { chat: Conversation; at: string }>();
-  for (const chat of state.conversations) {
-    if (chat.workspaceId !== workspaceId || chat.kind !== "agent") continue;
-    const at = lastMessageAt(chat.id);
-    const agentId = chat.agentIds[0];
-    if (!at || !agentId) continue;
-    const current = latest.get(agentId);
-    if (!current || at > current.at) latest.set(agentId, { chat, at });
-  }
-  return [...latest.values()].map((item) => item.chat);
+function chatAgentsIn(workspaceId: string): Agent[] {
+  const ids = agentChatsIn(workspaceId)
+    .map((chat) => chat.agentIds[0] ?? "")
+    .filter((id, index, all) => id !== AIRENE_ID && all.indexOf(id) === index);
+  return ids.map((id) => getAgent(id)).filter((agent): agent is Agent => Boolean(agent));
 }
 
-/** Unread messages across your groups and direct messages, for the Chats badge. */
+/** Unread replies across your chats with one agent, for its row in the sidebar. */
+function agentUnreadCount(workspaceId: string, agentId: string): number {
+  return chatsWith(workspaceId, agentId).reduce((total, chat) => total + unreadCount(chat.id), 0);
+}
+
+/** Who an agent chat is with. */
+function agentOf(conversation: Conversation): Agent | undefined {
+  return conversation.kind === "agent" ? getAgent(conversation.agentIds[0] ?? "") : undefined;
+}
+
+/** Unread messages across your agent chats and groups, for the Chats badge. */
 function chatUnreadCount(workspaceId: string): number {
-  return [
-    ...joinedChannelsIn(workspaceId),
-    ...dmsIn(workspaceId),
-    ...agentDmsIn(workspaceId)
-  ].reduce((total, conversation) => total + unreadCount(conversation.id), 0);
-}
-
-function agentChatsIn(workspaceId: string, agentId: string): Conversation[] {
-  return state.conversations.filter(
-    (item) =>
-      item.workspaceId === workspaceId && item.kind === "agent" && item.agentIds.includes(agentId)
+  return [...agentChatsIn(workspaceId), ...joinedChannelsIn(workspaceId)].reduce(
+    (total, conversation) => total + unreadCount(conversation.id),
+    0
   );
 }
 
-/** Where "Home" lands for a project: General, another joined group, or the group browser. */
+/** Where the app opens: Airene, at the top of the sidebar. */
 function homePath(workspaceId: string): string {
-  const first =
-    joinedChannelsIn(workspaceId).find((item) => item.slug === "general") ??
-    joinedChannelsIn(workspaceId)[0];
-  return first ? conversationPath(workspaceId, first.slug) : `${workspacePath(workspaceId)}/groups`;
+  return agentChatPath(workspaceId, AIRENE_ID);
 }
 
-/** "QA and release", "Sari Wijaya", or an agent chat title. */
+/** "Creative", or an agent chat's title. */
 function conversationTitle(conversation: Conversation): string {
-  if (conversation.kind === "channel") return conversation.name;
-  if (conversation.kind === "dm") {
-    const otherId = conversation.memberIds.find((id) => id !== CURRENT_USER_ID);
-    return (otherId && getPerson(otherId)?.name) || ME;
-  }
   return conversation.name;
 }
 
-/** The title with a group's emoji in front, for lists and headers: "🧪 QA and release". */
+/** The title with a group's emoji in front, for lists and headers: "🎨 Creative". */
 function conversationLabel(conversation: Conversation): string {
-  const title = conversationTitle(conversation);
   return conversation.kind === "channel" && conversation.emoji
-    ? `${conversation.emoji} ${title}`
-    : title;
+    ? `${conversation.emoji} ${conversation.name}`
+    : conversation.name;
 }
 
-/** URL-safe and unique within the project: "research", then "research-2". */
+/** URL-safe and unique among groups: "research", then "research-2". */
 function uniqueSlug(workspaceId: string, name: string): string {
   const base = toSlug(name);
   const taken = new Set(channelsIn(workspaceId).map((item) => item.slug));
@@ -133,11 +149,18 @@ function uniqueSlug(workspaceId: string, name: string): string {
   return slug;
 }
 
-// ─── Actions ────────────────────────────────────────────────────────────────
+const CHAT_TITLE_LENGTH = 48;
 
-function rememberWorkspace(id: string): void {
-  state.lastWorkspaceId = id;
+/** A chat's title from its first message: the text without @mentions, cut at a word. */
+function chatTitle(first: Pick<MessageDraft, "text" | "mentions">): string {
+  const plain = withoutMentions(first.text, first.mentions).replace(/\s+/g, " ").trim();
+  if (!plain) return "New chat";
+  if (plain.length <= CHAT_TITLE_LENGTH) return plain;
+  const cut = plain.slice(0, CHAT_TITLE_LENGTH);
+  return `${cut.slice(0, cut.lastIndexOf(" ")) || cut}…`;
 }
+
+// ─── Actions ────────────────────────────────────────────────────────────────
 
 function joinChannel(conversation: Conversation): void {
   if (isMember(conversation)) return;
@@ -145,10 +168,19 @@ function joinChannel(conversation: Conversation): void {
   postSystemMessage(conversation.id, `${ME} joined`);
 }
 
+/** A new group with you, the people you picked, Airene (always) and any agents you picked. */
 function createChannel(
   workspaceId: string,
-  input: { name: string; emoji: string; description: string; agentIds: string[] }
+  input: {
+    name: string;
+    emoji: string;
+    description: string;
+    personIds: string[];
+    agentIds: string[];
+  }
 ): Conversation {
+  const personIds = input.personIds.filter((id) => id !== CURRENT_USER_ID);
+  const agentIds = [AIRENE_ID, ...input.agentIds.filter((id) => id !== AIRENE_ID)];
   const conversation: Conversation = {
     id: createId(`${workspaceId}-channel`),
     workspaceId,
@@ -157,17 +189,20 @@ function createChannel(
     name: input.name.trim(),
     emoji: input.emoji,
     description: input.description,
-    memberIds: [CURRENT_USER_ID],
-    agentIds: [...input.agentIds],
-    agentAddedBy: Object.fromEntries(input.agentIds.map((id) => [id, CURRENT_USER_ID])),
+    memberIds: [CURRENT_USER_ID, ...personIds],
+    agentIds,
+    agentAddedBy: Object.fromEntries(agentIds.map((id) => [id, CURRENT_USER_ID])),
     createdAt: new Date().toISOString()
   };
   state.conversations.push(conversation);
   postSystemMessage(conversation.id, `${ME} created this group`);
-  if (input.agentIds.length) {
-    const agentNames = input.agentIds.map((id) => getAgent(id)?.name ?? id);
-    postSystemMessage(conversation.id, `${ME} added ${listNames(agentNames)}`);
-  }
+  // People first, then agents: "Rizal Candra added Maya Putri, Airene and Copywriter"
+  const names = [
+    ...personIds.map((id) => getPerson(id)?.name ?? id),
+    ...agentIds.map((id) => getAgent(id)?.name ?? id)
+  ];
+  postSystemMessage(conversation.id, `${ME} added ${listNames(names)}`);
+  introduceAgents({ workspaceId, threadId: conversation.id, agentIds }, agentIds, CURRENT_USER_ID);
   return conversation;
 }
 
@@ -185,34 +220,32 @@ function addMembers(conversation: Conversation, personIds: string[], agentIds: s
     ...newAgents.map((id) => getAgent(id)?.name ?? id)
   ];
   postSystemMessage(conversation.id, `${ME} added ${listNames(names)}`);
+  // New agents say hello; people don't get a scripted line.
+  if (newAgents.length) {
+    introduceAgents(
+      {
+        workspaceId: conversation.workspaceId,
+        threadId: conversation.id,
+        agentIds: conversation.agentIds
+      },
+      newAgents,
+      CURRENT_USER_ID
+    );
+  }
 }
 
-function openDm(workspaceId: string, personId: string): Conversation {
-  const existing = getConversation(workspaceId, `dm-${personId}`);
-  if (existing) return existing;
+/** A new private chat with an agent, titled from your first message. */
+function createAgentChat(
+  workspaceId: string,
+  agentId: string,
+  firstMessage: Pick<MessageDraft, "text" | "mentions">
+): Conversation {
   const conversation: Conversation = {
-    id: createId(`${workspaceId}-dm`),
-    workspaceId,
-    kind: "dm",
-    slug: `dm-${personId}`,
-    name: "",
-    memberIds: [CURRENT_USER_ID, personId],
-    agentIds: [],
-    agentAddedBy: {},
-    createdAt: new Date().toISOString()
-  };
-  state.conversations.push(conversation);
-  return conversation;
-}
-
-function createAgentChat(workspaceId: string, agentId: string): Conversation {
-  const id = createId(`${workspaceId}-chat`);
-  const conversation: Conversation = {
-    id,
+    id: createId(`${workspaceId}-chat`),
     workspaceId,
     kind: "agent",
-    slug: id,
-    name: "New chat",
+    slug: createId("chat"),
+    name: chatTitle(firstMessage),
     memberIds: [CURRENT_USER_ID],
     agentIds: [agentId],
     agentAddedBy: { [agentId]: CURRENT_USER_ID },
@@ -222,94 +255,35 @@ function createAgentChat(workspaceId: string, agentId: string): Conversation {
   return conversation;
 }
 
-function renameConversation(conversation: Conversation, name: string): void {
-  conversation.name = name;
-}
-
-function addAgentToWorkspace(workspaceId: string, agentId: string): void {
-  const workspace = getWorkspace(workspaceId);
-  if (workspace && !workspace.agentIds.includes(agentId)) workspace.agentIds.push(agentId);
-}
-
-function inviteToWorkspace(workspaceId: string, emails: string[], role: WorkspaceRole): void {
-  const workspace = getWorkspace(workspaceId);
-  if (!workspace) return;
-  const invitedAt = new Date().toISOString();
-  emails.forEach((email) => {
-    const invite: Invite = {
-      id: createId("inv"),
-      email,
-      role,
-      invitedBy: CURRENT_USER_ID,
-      invitedAt
-    };
-    workspace.invites.unshift(invite);
-  });
-}
-
-function revokeInvite(workspaceId: string, inviteId: string): void {
-  const workspace = getWorkspace(workspaceId);
-  if (workspace) workspace.invites = workspace.invites.filter((invite) => invite.id !== inviteId);
-}
-
-/** "Loyalty program refresh" → "LP" */
-export function projectInitials(name: string): string {
-  const words = name.trim().split(/\s+/).filter(Boolean);
-  const initials =
-    words.length > 1 ? words[0]!.charAt(0) + words[1]!.charAt(0) : (words[0] ?? "").slice(0, 2);
-  return initials.toUpperCase();
-}
-
-function createProject(input: { name: string; description: string; emoji?: string }): Workspace {
-  const workspace: Workspace = {
-    id: createId("project"),
-    name: input.name.trim(),
-    initials: projectInitials(input.name),
-    emoji: input.emoji,
-    color: "violet",
-    description: input.description.trim(),
-    timeline: "Just started",
-    members: [{ personId: CURRENT_USER_ID, role: "admin" }],
-    agentIds: ["airene"],
-    invites: []
-  };
-  state.workspaces.push(workspace);
-  createChannel(workspace.id, {
-    name: "General",
-    emoji: "📣",
-    description: "Announcements and updates",
-    agentIds: ["airene"]
-  });
-  return workspace;
+/** Pins a group to the top of the sidebar's groups, or unpins it. */
+function togglePin(conversation: Conversation) {
+  conversation.pinnedAt = conversation.pinnedAt ? undefined : new Date().toISOString();
 }
 
 export function useWorkspaceStore() {
   return {
     state,
-    myWorkspaces,
+    defaultWorkspace,
     getWorkspace,
     getConversation,
+    getAgentChat,
     getConversationById,
     isMember,
     channelsIn,
-    agentDmsIn,
-    chatUnreadCount,
     joinedChannelsIn,
-    dmsIn,
     agentChatsIn,
+    chatsWith,
+    chatAgentsIn,
+    agentUnreadCount,
+    agentOf,
+    chatUnreadCount,
     homePath,
     conversationTitle,
     conversationLabel,
-    rememberWorkspace,
     joinChannel,
     createChannel,
     addMembers,
-    openDm,
     createAgentChat,
-    renameConversation,
-    addAgentToWorkspace,
-    inviteToWorkspace,
-    revokeInvite,
-    createProject
+    togglePin
   };
 }

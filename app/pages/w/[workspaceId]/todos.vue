@@ -2,7 +2,7 @@
   <div v-if="workspace" :class="pageClass">
     <PageHeader title="Todos">
       <template #actions>
-        <MpButton left-icon="add" @click="isAddOpen = true">Add todo</MpButton>
+        <MpButton is-rounded left-icon="add" @click="isAddOpen = true">Add todo</MpButton>
       </template>
     </PageHeader>
 
@@ -35,6 +35,7 @@
       <!-- ═════ Done ═════ -->
       <template v-if="doneTodos.length">
         <MpButton
+          is-rounded
           variant="ghost"
           size="sm"
           :right-icon="isDoneOpen ? 'chevrons-up' : 'chevrons-down'"
@@ -72,7 +73,7 @@ import { useCurrentWorkspace } from "~/composables/useCurrentWorkspace";
 import { useTodoStore } from "~/composables/useTodoStore";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 import { CURRENT_USER_ID } from "~/data/people";
-import { conversationPath } from "~/utils/paths";
+import { threadPath } from "~/utils/paths";
 
 const { workspace } = useCurrentWorkspace();
 const { todosFor, toggleTodo } = useTodoStore();
@@ -117,9 +118,7 @@ function sourceLabel(threadId?: string): string | undefined {
 
 function sourcePath(threadId?: string): string | undefined {
   const conversation = threadId ? getConversationById(threadId) : undefined;
-  return conversation && workspace.value
-    ? conversationPath(workspace.value.id, conversation.slug)
-    : undefined;
+  return conversation && workspace.value ? threadPath(workspace.value.id, conversation) : undefined;
 }
 
 const pageClass = css({ display: "flex", flexDirection: "column", flex: "1", minH: "0" });

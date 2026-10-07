@@ -7,26 +7,17 @@ function avatar(n: number): string {
   return `/images/avatars/avatar-${String(n).padStart(2, "0")}.webp`;
 }
 
+// Central Perk Indonesia's marketing team.
 export const PEOPLE: Person[] = [
-  { id: "rizal", name: "Rizal Candra", title: "Head of Digital", color: "teal", avatar: avatar(1) },
-  { id: "sari", name: "Sari Wijaya", title: "Product manager", color: "violet", avatar: avatar(7) },
   {
-    id: "dewi",
-    name: "Dewi Lestari",
-    title: "Product designer",
-    color: "pink",
-    avatar: avatar(14)
+    id: "rizal",
+    name: "Rizal Candra",
+    title: "Head of Marketing",
+    color: "teal",
+    avatar: avatar(1)
   },
-  { id: "budi", name: "Budi Santoso", title: "Mobile engineer", color: "sky", avatar: avatar(2) },
-  {
-    id: "arif",
-    name: "Arif Hidayat",
-    title: "Backend engineer",
-    color: "amber",
-    avatar: avatar(5)
-  },
-  { id: "tari", name: "Tari Anggraini", title: "QA engineer", color: "rose", avatar: avatar(10) },
-  { id: "maya", name: "Maya Putri", title: "Marketing lead", color: "lime", avatar: avatar(13) },
+  { id: "maya", name: "Maya Putri", title: "Brand manager", color: "lime", avatar: avatar(13) },
+  { id: "dewi", name: "Dewi Lestari", title: "Brand designer", color: "pink", avatar: avatar(14) },
   { id: "kevin", name: "Kevin Tan", title: "Content creator", color: "sky", avatar: avatar(3) },
   {
     id: "nadia",

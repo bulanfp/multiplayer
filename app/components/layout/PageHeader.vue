@@ -1,15 +1,21 @@
 <template>
   <div :class="headerClass">
-    <div :class="titleGroupClass">
-      <span v-if="$slots.leading" :class="leadingClass">
-        <slot name="leading" />
-      </span>
-      <MpText as="h1" size="h1" is-truncated :class="css({ flexShrink: '0', maxW: 'full' })">
-        {{ title }}
+    <div :class="titleBlockClass">
+      <!-- Where this page sits, e.g. "Agents" above an agent's name -->
+      <MpText v-if="parent" size="label-small">
+        <NuxtLink :to="parent.to" :class="parentLinkClass">{{ parent.label }}</NuxtLink>
       </MpText>
-      <MpText v-if="subtitle" color="text.secondary" is-truncated :class="css({ minW: '0' })">
-        {{ subtitle }}
-      </MpText>
+      <div :class="titleGroupClass">
+        <span v-if="$slots.leading" :class="leadingClass">
+          <slot name="leading" />
+        </span>
+        <MpText as="h1" size="h1" is-truncated :class="css({ flexShrink: '0', maxW: 'full' })">
+          {{ title }}
+        </MpText>
+        <MpText v-if="subtitle" color="text.secondary" is-truncated :class="css({ minW: '0' })">
+          {{ subtitle }}
+        </MpText>
+      </div>
     </div>
 
     <div :class="actionsClass">
@@ -26,6 +32,8 @@ interface PageHeaderProps {
   title: string;
   /** Quiet text after the title, e.g. a group description */
   subtitle?: string;
+  /** Link back to the page this one belongs to */
+  parent?: { label: string; to: string };
 }
 
 defineProps<PageHeaderProps>();
@@ -40,6 +48,16 @@ const headerClass = css({
   // Design keeps the action ~20px from the edge but the title 24px in.
   pl: "6",
   pr: "5"
+});
+
+const titleBlockClass = css({ display: "flex", flexDirection: "column", gap: "0.5", minW: "0" });
+
+// Enterprise links are green: text.selected, since Pixel's text.link stays blue there.
+const parentLinkClass = css({
+  color: "text.selected",
+  textDecoration: "none",
+  _hover: { textDecoration: "underline" },
+  _focusVisible: { outline: "2px solid", outlineColor: "border.focused", rounded: "sm" }
 });
 
 const titleGroupClass = css({

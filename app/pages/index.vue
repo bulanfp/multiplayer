@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 
-const { state, homePath } = useWorkspaceStore();
+// One shared space: the app opens on your chat with Airene.
+const { defaultWorkspace, homePath } = useWorkspaceStore();
 
-navigateTo(homePath(state.lastWorkspaceId), { replace: true });
+const workspace = defaultWorkspace();
+if (workspace) navigateTo(homePath(workspace.id), { replace: true });
 </script>

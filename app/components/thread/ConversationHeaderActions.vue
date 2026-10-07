@@ -8,12 +8,14 @@
     @click="emit('toggleMembers')"
   >
     <span :class="stackClass">
-      <MemberAvatar
+      <span
         v-for="actor in previewActors"
         :key="`${actor.kind}-${actor.id}`"
-        :actor="actor"
-        size="sm"
-      />
+        :class="faceClass"
+        :data-kind="actor.kind"
+      >
+        <MemberAvatar :actor="actor" size="sm" />
+      </span>
     </span>
     <MpText color="text.secondary">{{ total }}</MpText>
   </button>
@@ -65,5 +67,19 @@ const stackClass = css({
   display: "inline-flex",
   "& > *": { boxShadow: "0 0 0 2px token(colors.background.neutral)" },
   "& > *:not(:first-child)": { ml: "-1.5" }
+});
+
+// Every face is a 24px circle, so each gets the same round white ring. People fill theirs;
+// an agent's 3D icon has a transparent square around it, so it sits inset on Pixel's soft
+// AI background instead.
+const faceClass = css({
+  display: "inline-flex",
+  flexShrink: "0",
+  w: "6",
+  h: "6",
+  rounded: "full",
+  overflow: "hidden",
+  "&[data-kind=agent]": { bg: "background.airene" },
+  "&[data-kind=agent] > img": { p: "3px" }
 });
 </script>

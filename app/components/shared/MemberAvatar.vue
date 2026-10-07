@@ -20,7 +20,7 @@
     v-else-if="person"
     :name="person.name"
     :src="person.avatar"
-    :size="size === 'lg' ? 'lg' : 'md'"
+    :size="size === 'xl' ? 'xl' : size === 'lg' ? 'lg' : 'md'"
     :variant-color="person.color"
     :class="personClass"
     :data-size="size"
@@ -37,8 +37,8 @@ import type { Actor } from "~/data/types";
 interface MemberAvatarProps {
   /** Person or agent to show */
   actor: Actor;
-  /** xs 20px · sm 24px · md 32px · lg 36px */
-  size?: "xs" | "sm" | "md" | "lg";
+  /** xs 20px · sm 24px · md 32px · lg 36px · xl 64px (empty states) */
+  size?: "xs" | "sm" | "md" | "lg" | "xl";
 }
 
 const props = withDefaults(defineProps<MemberAvatarProps>(), { size: "md" });
@@ -52,7 +52,8 @@ const SIZES = {
   "&[data-size=xs]": { w: "20px", h: "20px", fontSize: "9px" },
   "&[data-size=sm]": { w: "6", h: "6", fontSize: "10px" },
   "&[data-size=md]": { w: "8", h: "8", fontSize: "xs" },
-  "&[data-size=lg]": { w: "9", h: "9", fontSize: "sm" }
+  "&[data-size=lg]": { w: "9", h: "9", fontSize: "sm" },
+  "&[data-size=xl]": { w: "64px", h: "64px", fontSize: "xl" }
 };
 
 const agentIconClass = css({ flexShrink: "0", objectFit: "contain", ...SIZES });
@@ -82,6 +83,7 @@ const personClass = css({
   flexShrink: "0",
   "&[data-size=xs]": { w: "20px !important", h: "20px !important", fontSize: "9px !important" },
   "&[data-size=sm]": { w: "6 !important", h: "6 !important", fontSize: "10px !important" },
-  "&[data-size=md]": { w: "8 !important", h: "8 !important", fontSize: "xs !important" }
+  "&[data-size=md]": { w: "8 !important", h: "8 !important", fontSize: "xs !important" },
+  "&[data-size=xl]": { w: "64px !important", h: "64px !important", fontSize: "xl !important" }
 });
 </script>

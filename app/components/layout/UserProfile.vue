@@ -1,14 +1,22 @@
 <template>
   <DropdownTransition align="right" min-width="280px">
     <template #trigger>
-      <button type="button" :class="triggerClass" aria-haspopup="menu">
-        <MpAvatar
-          :name="name"
-          :src="avatar"
-          size="lg"
-          variant-color="gray"
-          :class="!avatar && avatarClass"
-        />
+      <button
+        type="button"
+        :class="triggerClass"
+        aria-haspopup="menu"
+        :aria-label="`${name}, ${company}, ${presence}`"
+      >
+        <span :class="css({ position: 'relative', display: 'flex', flexShrink: '0' })">
+          <MpAvatar
+            :name="name"
+            :src="avatar"
+            size="lg"
+            variant-color="gray"
+            :class="!avatar && avatarClass"
+          />
+          <span :class="[dotClass, cutoutClass]" :data-presence="presence" aria-hidden="true" />
+        </span>
         <MpFlex direction="column" alignItems="flex-start">
           <MpText weight="semiBold" color="text.inverse">{{ name }}</MpText>
           <MpText size="body-small" color="text.inverse" :class="css({ opacity: '0.7' })">
@@ -19,6 +27,25 @@
     </template>
 
     <div role="menu" :class="css({ display: 'flex', flexDirection: 'column', pt: '2' })">
+      <button
+        v-for="option in PRESENCE_OPTIONS"
+        :key="option.value"
+        type="button"
+        role="menuitemradio"
+        :aria-checked="presence === option.value"
+        :class="menuItemClass"
+        @click="setPresence(option.value)"
+      >
+        <!-- The 16px column the icons below use -->
+        <span :class="dotBoxClass">
+          <span :class="dotClass" :data-presence="option.value" aria-hidden="true" />
+        </span>
+        <span :class="css({ flex: '1' })">{{ option.label }}</span>
+        <MpIcon v-if="presence === option.value" name="check" size="sm" color="icon.brand" />
+      </button>
+
+      <MpDivider />
+
       <button
         v-for="item in MENU_ITEMS"
         :key="item.label"
@@ -50,6 +77,7 @@
 <script setup lang="ts">
 import { css, MpAvatar, MpDivider, MpFlex, MpIcon, MpText, type IconName } from "@mekari/pixel3";
 import DropdownTransition from "~/components/layout/DropdownTransition.vue";
+import { usePresenceStore, type Presence } from "~/composables/usePresenceStore";
 
 interface UserProfileProps {
   /** Display name, also used for the avatar initials */
@@ -63,6 +91,13 @@ interface UserProfileProps {
 }
 
 defineProps<UserProfileProps>();
+
+const { presence, setPresence } = usePresenceStore();
+
+const PRESENCE_OPTIONS: { value: Presence; label: string }[] = [
+  { value: "online", label: "Online" },
+  { value: "offline", label: "Offline" }
+];
 
 const MENU_ITEMS: { label: string; icon: IconName }[] = [
   { label: "My info", icon: "employee" },
@@ -92,6 +127,36 @@ const triggerClass = css({
 const avatarClass = css({
   bg: "background.brand.hovered !important",
   color: "text.default !important"
+});
+
+// Online is a filled green dot, offline a hollow gray ring, so the two differ in shape
+// as well as colour.
+const dotClass = css({
+  display: "block",
+  flexShrink: "0",
+  w: "10px",
+  h: "10px",
+  rounded: "full",
+  "&[data-presence=online]": { bg: "icon.success" },
+  "&[data-presence=offline]": { borderWidth: "2px", borderColor: "border.bold" }
+});
+
+// On the avatar's edge at the bottom right, cut out of it by a ring in the header's colour.
+const cutoutClass = css({
+  position: "absolute",
+  right: "0",
+  bottom: "0",
+  boxShadow: "0 0 0 2px token(colors.background.surface.bold)",
+  "&[data-presence=offline]": { bg: "background.surface.bold" }
+});
+
+const dotBoxClass = css({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: "0",
+  w: "4",
+  h: "4"
 });
 
 const menuItemClass = css({

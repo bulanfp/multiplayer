@@ -11,7 +11,7 @@
       <MpIcon v-else-if="icon" :name="icon" size="md" color="icon.default" />
     </slot>
     <MpText
-      :weight="isActive || badge ? 'semiBold' : 'regular'"
+      weight="regular"
       :color="isMuted ? 'text.secondary' : 'text.default'"
       is-truncated
       :class="css({ flex: '1', minW: '0' })"
@@ -36,18 +36,22 @@ interface SideMenuItemProps {
   icon?: IconName;
   /** Text in the leading slot instead of an icon, e.g. a group's emoji */
   prefix?: string;
-  /** Unread count; also makes the label bold */
+  /** Unread count, shown as a badge; the label stays regular */
   badge?: number;
-  /** Quieter label for utility rows like "Browse groups" */
+  /** Quieter label for utility rows */
   isMuted?: boolean;
   /** Size of custom leading content: "lg" for 32px agent avatars */
   leading?: "md" | "lg";
+  /** Also active on pages under `to`, e.g. an agent and each of its chats */
+  isPrefixMatch?: boolean;
 }
 
 const props = withDefaults(defineProps<SideMenuItemProps>(), { leading: "md" });
 
 const route = useRoute();
-const isActive = computed(() => route.path === props.to);
+const isActive = computed(
+  () => route.path === props.to || (props.isPrefixMatch && route.path.startsWith(`${props.to}/`))
+);
 
 const itemClass = css({
   display: "flex",

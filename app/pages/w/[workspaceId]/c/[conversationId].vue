@@ -1,14 +1,14 @@
 <!--
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Mekari Multiplayer — Group, direct message and agent chat
-  Source: confirmed plan (no Figma for this screen); Slack/Discord as reference
+  Mekari Multiplayer — A group
+  Source: confirmed plan (no Figma for this screen); Slack and Mekari Airene chat as references
   Token mode: Pixel 2.4, enterprise product theme
   Patterns used: layout-shell
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   STATES INCLUDED:
-    - Thread with day dividers and grouped messages; system messages for membership changes
-    - Groups open with an intro and show their description; direct messages show only the avatar and name
+    - Group: thread with day dividers and grouped messages, your own on the right; system
+      messages for membership changes; an intro with the group's description
     - @mention list (agents first), "<agent> is writing…", scripted reply with output card
     - Output canvas (versions, copy, close) and members panel, one at a time
     - Not a member yet: Join bar instead of the composer
@@ -16,44 +16,26 @@
 -->
 <template>
   <div :class="pageClass">
-    <template v-if="workspace && conversation">
-      <!-- ═════ Page header ═════ -->
-      <PageHeader :title="label" :subtitle="subtitle">
-        <template v-if="headerActor" #leading>
-          <MemberAvatar :actor="headerActor" />
-        </template>
+    <!-- ═════ A group ═════ -->
+    <template v-if="workspace && group">
+      <PageHeader :title="label" :subtitle="group.description">
         <template #actions>
-          <!-- An agent chat opened from Direct messages; its other chats live on the agent page -->
-          <MpButton
-            v-if="agent"
-            variant="secondary"
-            @click="
-              navigateTo({
-                path: agentPath(workspace.id, agent.id),
-                query: { chat: conversation.id }
-              })
-            "
-          >
-            All chats
-          </MpButton>
           <ConversationHeaderActions
-            v-else
-            :conversation="conversation"
+            :conversation="group"
             :is-members-open="panel?.kind === 'members'"
             @toggle-members="toggleMembers"
           />
         </template>
       </PageHeader>
 
-      <!-- ═════ Conversation ═════ -->
       <PageContent :padded="false">
         <div :class="workspaceClass">
           <ThreadView
-            :thread-id="conversation.id"
+            :thread-id="group.id"
             :label="`Messages in ${title}`"
             :mentionables="mentionables"
-            :placeholder="placeholder"
-            :can-post="isMember(conversation)"
+            :placeholder="`Message ${title}`"
+            :can-post="isMember(group)"
             :active-output="
               panel?.kind === 'output' ? { id: panel.outputId, version: panel.version } : null
             "
@@ -61,8 +43,8 @@
             @open-output="openOutput"
             @pick="pick"
           >
-            <!-- Groups only: a direct message already says who it's with in the header -->
-            <template v-if="conversation.kind === 'channel'" #intro>
+            <!-- What the group is for, and how to bring an agent in -->
+            <template #intro>
               <div :class="introClass">
                 <MpText size="h2">Welcome to {{ label }}</MpText>
                 <MpText color="text.secondary">{{ introText }}</MpText>
@@ -80,14 +62,12 @@
               :output-id="panel.outputId"
               :version="panel.version"
               @close="panel = null"
-              @update:version="
-                panel = { kind: 'output', outputId: panel.outputId, version: $event }
-              "
+              @update:version="setOutputVersion"
             />
             <ConversationMembersPanel
               v-else-if="panel?.kind === 'members'"
               key="members"
-              :conversation="conversation"
+              :conversation="group"
               @close="panel = null"
               @add="isAddOpen = true"
             />
@@ -97,17 +77,17 @@
 
       <AddMembersModal
         :is-open="isAddOpen"
-        :conversation="conversation"
+        :conversation="group"
         :workspace="workspace"
         @close="isAddOpen = false"
       />
     </template>
 
     <template v-else>
-      <PageHeader title="Conversation not found" />
+      <PageHeader title="Group not found" />
       <PageContent>
         <MpText color="text.secondary">
-          This group doesn't exist anymore or the link is wrong. Pick one from the sidebar.
+          This group doesn't exist anymore, or the link is wrong. Pick one from the sidebar.
         </MpText>
       </PageContent>
     </template>
@@ -116,10 +96,9 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { css, toast, MpButton, MpText } from "@mekari/pixel3";
+import { css, toast, MpText } from "@mekari/pixel3";
 import PageContent from "~/components/layout/PageContent.vue";
 import PageHeader from "~/components/layout/PageHeader.vue";
-import MemberAvatar from "~/components/shared/MemberAvatar.vue";
 import SidePanelTransition from "~/components/layout/SidePanelTransition.vue";
 import AddMembersModal from "~/components/thread/AddMembersModal.vue";
 import ConversationHeaderActions from "~/components/thread/ConversationHeaderActions.vue";
@@ -130,11 +109,9 @@ import ThreadView from "~/components/thread/ThreadView.vue";
 import { useChatStore } from "~/composables/useChatStore";
 import { useCurrentWorkspace } from "~/composables/useCurrentWorkspace";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
-import { getAgent } from "~/data/agents";
 import { CURRENT_USER_ID } from "~/data/people";
-import type { Actor, Mention } from "~/data/types";
+import type { MessageDraft } from "~/data/types";
 import { toMentionables } from "~/utils/directory";
-import { agentPath } from "~/utils/paths";
 
 type Panel = { kind: "members" } | { kind: "output"; outputId: string; version: number };
 
@@ -147,70 +124,42 @@ const { sendMessage, pickOption, setActiveThread, leaveThread, getOutput } = use
 const panel = ref<Panel | null>(null);
 const isAddOpen = ref(false);
 
-const conversation = computed(() =>
+const group = computed(() =>
   workspace.value
     ? getConversation(workspace.value.id, String(route.params.conversationId))
     : undefined
 );
 
-/** Set when this is a 1:1 chat with an agent, opened from Direct messages. */
-const agent = computed(() =>
-  conversation.value?.kind === "agent" ? getAgent(conversation.value.agentIds[0] ?? "") : undefined
-);
-
-const title = computed(() => {
-  if (agent.value) return agent.value.name;
-  return conversation.value ? conversationTitle(conversation.value) : "";
-});
+const title = computed(() => (group.value ? conversationTitle(group.value) : ""));
 /** With the group's emoji, for the header and intro. */
-const label = computed(() => {
-  if (agent.value) return agent.value.name;
-  return conversation.value ? conversationLabel(conversation.value) : "";
-});
-/** Who a direct message is with: their photo, or the agent's icon. Groups have none. */
-const headerActor = computed<Actor | undefined>(() => {
-  if (agent.value) return { kind: "agent", id: agent.value.id };
-  if (conversation.value?.kind !== "dm") return undefined;
-  const otherId = conversation.value.memberIds.find((id) => id !== CURRENT_USER_ID);
-  return otherId ? { kind: "person", id: otherId } : undefined;
-});
+const label = computed(() => (group.value ? conversationLabel(group.value) : ""));
 
-/** Only groups have one: their description. */
-const subtitle = computed(() =>
-  conversation.value?.kind === "channel" ? conversation.value.description : undefined
-);
-
-// Agent chats need no @: every message goes to the agent.
 const mentionables = computed(() =>
-  conversation.value && !agent.value
+  group.value
     ? toMentionables(
-        conversation.value.memberIds.filter((id) => id !== CURRENT_USER_ID),
-        conversation.value.agentIds
+        group.value.memberIds.filter((id) => id !== CURRENT_USER_ID),
+        group.value.agentIds
       )
     : []
 );
 
-// Short so it fits a narrow chat; the group intro explains @mentions.
-const placeholder = computed(() => `Message ${title.value}`);
-
-/** The group intro: what it's for and how to bring an agent in. */
+/** The group intro: what it's for and how to bring an agent in. Airene is always here. */
 const introText = computed(() => {
-  if (!conversation.value) return "";
-  const purpose = conversation.value.description || "This is the start of the group";
-  return conversation.value.agentIds.length
-    ? `${purpose}. Mention an agent with @ and it will reply here.`
-    : `${purpose}. Add an agent from the member list, then mention it with @.`;
+  const purpose = group.value?.description || "This is the start of the group";
+  return `${purpose}. Mention an agent with @ and it will reply here; Airene is always in.`;
 });
 
-/** The thread this page marked as being read, so leaving only clears its own. */
+/** The group this page marked as being read, so leaving only clears its own. */
 let viewingThreadId: string | undefined;
 
-// Opening ?output=<id>&v=<n> (from Activity) shows that output in the canvas.
+// Opening ?output=<id>&v=<n> (from the Library or Activity) shows that output in the canvas.
 watch(
-  () => [conversation.value?.id, route.query.output, route.query.v] as const,
+  () => [group.value?.id, route.query.output, route.query.v] as const,
   ([id, outputId, version]) => {
+    if (viewingThreadId && viewingThreadId !== id) leaveThread(viewingThreadId);
     viewingThreadId = id;
-    setActiveThread(id ?? null);
+    if (!id) return;
+    setActiveThread(id);
     const output = typeof outputId === "string" ? getOutput(outputId) : undefined;
     panel.value = output
       ? { kind: "output", outputId: output.id, version: Number(version) || output.versions.length }
@@ -221,7 +170,7 @@ watch(
 
 onBeforeUnmount(() => leaveThread(viewingThreadId));
 
-useHead({ title });
+useHead({ title: () => title.value || "Group not found" });
 
 function toggleMembers() {
   panel.value = panel.value?.kind === "members" ? null : { kind: "members" };
@@ -231,37 +180,30 @@ function openOutput(outputId: string, version: number) {
   panel.value = { kind: "output", outputId, version };
 }
 
-function send(payload: { text: string; mentions: Mention[] }) {
-  if (!workspace.value || !conversation.value) return;
+function setOutputVersion(version: number) {
+  if (panel.value?.kind === "output") panel.value = { ...panel.value, version };
+}
+
+function send(draft: MessageDraft) {
+  if (!workspace.value || !group.value) return;
   sendMessage(
-    {
-      workspaceId: workspace.value.id,
-      threadId: conversation.value.id,
-      agentIds: conversation.value.agentIds,
-      replyAgentId: agent.value?.id
-    },
-    payload.text,
-    payload.mentions
+    { workspaceId: workspace.value.id, threadId: group.value.id, agentIds: group.value.agentIds },
+    draft
   );
 }
 
 function pick(messageId: string, optionId: string) {
-  if (!workspace.value || !conversation.value) return;
+  if (!workspace.value || !group.value) return;
   pickOption(
-    {
-      workspaceId: workspace.value.id,
-      threadId: conversation.value.id,
-      agentIds: conversation.value.agentIds,
-      replyAgentId: agent.value?.id
-    },
+    { workspaceId: workspace.value.id, threadId: group.value.id, agentIds: group.value.agentIds },
     messageId,
     optionId
   );
 }
 
 function join() {
-  if (!conversation.value) return;
-  joinChannel(conversation.value);
+  if (!group.value) return;
+  joinChannel(group.value);
   toast.notify({ title: `Joined ${title.value}`, variant: "success" });
 }
 

@@ -1,10 +1,8 @@
 import { readonly, ref } from "vue";
 
-export type AppModal =
-  "create-channel" | "new-message" | "invite" | "create-project" | "create-agent";
+export type AppModal = "create-channel" | "new-chat";
 
-// Project-level modals are opened from several places (rail, submenu, pages) but
-// rendered once in the layout.
+// Modals opened from several places (the Chats menu, pages) but rendered once in the layout.
 const openModal = ref<AppModal | null>(null);
 
 export function useAppModals() {

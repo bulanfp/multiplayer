@@ -1,11 +1,10 @@
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 
-// Unknown projects go back home; known ones become the "last visited" project.
+// An unknown workspace in the URL goes back home.
 export default defineNuxtRouteMiddleware((to) => {
   const workspaceId = to.path.match(/^\/w\/([^/]+)/)?.[1];
   if (!workspaceId) return;
 
-  const { getWorkspace, rememberWorkspace } = useWorkspaceStore();
+  const { getWorkspace } = useWorkspaceStore();
   if (!getWorkspace(workspaceId)) return navigateTo("/", { replace: true });
-  rememberWorkspace(workspaceId);
 });

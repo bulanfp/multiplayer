@@ -1,39 +1,35 @@
 <!--
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Mekari Multiplayer — App shell
-  Source: Figma Cowork (gcfrWrVf5KFk0paqqM9WaN / 4363:2582) + Slack/Discord references
+  Source: Figma Cowork (gcfrWrVf5KFk0paqqM9WaN / 4363:2582) + Mekari ERP + Slack/Discord references
   Token mode: Pixel 2.4, enterprise product theme
   Patterns used: layout-shell (dual rail)
   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  Header and icon rail share the dark green frame. The rail switches projects (top icon)
-  and sections; Home and Agents add a submenu panel, other sections are full width.
+  A dark green header (logo, search, profile) over a rounded light canvas. As in Mekari ERP,
+  the icon rail sits inside the canvas and switches sections; Chats adds a submenu panel (your
+  agent chats and groups), other sections are full width. There are no projects: everyone
+  works in one shared space.
 
-  OPEN ITEMS for product/design follow-up:
-    - Agent icons in public/images/agents/ are cut from a screenshot; swap for @3x exports
-    - blob-pink, blocks-blue and cloud-teal are recoloured copies until design draws more
+  Agent icons in public/images/agents/ are design's HD 3D set, one per agent.
 -->
 <template>
   <div :class="rootClass">
     <!-- ═════ Header ═════ -->
     <AppHeader />
 
-    <div :class="bodyClass">
-      <!-- ═════ Rail ═════ -->
+    <!-- ═════ Layout shell: rail, submenu and page on one canvas ═════ -->
+    <PageShell>
       <AppRail />
 
-      <!-- ═════ Layout shell ═════ -->
-      <PageShell>
-        <PageLeftSidebar v-if="hasSubmenu">
-          <HomePanel v-if="section === 'home'" />
-          <AgentsPanel v-else />
-        </PageLeftSidebar>
+      <PageLeftSidebar v-if="hasSubmenu">
+        <HomePanel />
+      </PageLeftSidebar>
 
-        <PageMain>
-          <slot />
-        </PageMain>
-      </PageShell>
-    </div>
+      <PageMain>
+        <slot />
+      </PageMain>
+    </PageShell>
 
     <AppModals />
   </div>
@@ -41,7 +37,6 @@
 
 <script setup lang="ts">
 import { css } from "@mekari/pixel3";
-import AgentsPanel from "~/components/layout/AgentsPanel.vue";
 import AppHeader from "~/components/layout/AppHeader.vue";
 import AppModals from "~/components/layout/AppModals.vue";
 import AppRail from "~/components/layout/AppRail.vue";
@@ -51,7 +46,7 @@ import PageMain from "~/components/layout/PageMain.vue";
 import PageShell from "~/components/layout/PageShell.vue";
 import { useCurrentWorkspace } from "~/composables/useCurrentWorkspace";
 
-const { section, hasSubmenu } = useCurrentWorkspace();
+const { hasSubmenu } = useCurrentWorkspace();
 
 const rootClass = css({
   display: "flex",
@@ -60,6 +55,4 @@ const rootClass = css({
   overflow: "hidden",
   bg: "background.surface.bold"
 });
-
-const bodyClass = css({ display: "flex", flex: "1", minH: "0" });
 </script>

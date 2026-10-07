@@ -32,46 +32,62 @@ export interface Agent {
   icon?: string;
   /** How a custom agent should behave; set when someone creates one */
   instructions?: string;
+  /** Who made a custom agent, and when; built-in agents come from Mekari */
+  createdBy?: string;
+  createdAt?: string;
   initials: string;
   color: AgentColor;
 }
 
-export type WorkspaceRole = "admin" | "member";
-export type ProjectColor = "teal" | "amber" | "violet" | "sky";
+/** What using a skill touches: it reads data, changes records, or reaches outside the company. */
+export type SkillEffect = "read" | "write" | "external";
 
-export interface Invite {
-  id: string;
-  email: string;
-  role: WorkspaceRole;
-  invitedBy: string;
-  invitedAt: string;
+export interface AgentSkill {
+  name: string;
+  description: string;
+  effect: SkillEffect;
+  /** "ask": the agent checks with you before it uses the skill */
+  approval: "ask" | "auto";
 }
 
+/** How an agent is set up, shown on its profile. */
+export interface AgentProfile {
+  instruction: string;
+  model: string;
+  tasks: { title: string; description: string }[];
+  /** Live data the agent reads */
+  sources: string[];
+  /** Documents it has been given */
+  knowledge: string[];
+  skills: { group: string; items: AgentSkill[] }[];
+  connections: { name: string; isConnected: boolean }[];
+}
+
+export type WorkspaceRole = "admin" | "member";
+
+/** The company's one shared space. There are no projects: every group and agent lives here. */
 export interface Workspace {
   id: string;
   name: string;
-  initials: string;
-  /** Shown instead of the initials when set */
-  emoji?: string;
-  color: ProjectColor;
-  description: string;
-  timeline: string;
   members: { personId: string; role: WorkspaceRole }[];
+  /** Agents anyone here can chat with or add to a group */
   agentIds: string[];
-  invites: Invite[];
 }
 
-/** "channel" is shown as a group in the UI. */
-export type ConversationKind = "channel" | "dm" | "agent";
+/**
+ * "channel" is a group in the UI: people and agents, with Airene always among them.
+ * "agent" is one of your private chats with an agent; you can have many with each agent.
+ */
+export type ConversationKind = "channel" | "agent";
 
 export interface Conversation {
   /** Globally unique; also the thread id for messages */
   id: string;
   workspaceId: string;
   kind: ConversationKind;
-  /** Used in the URL: the group's short name, "dm-<personId>", or the id for agent chats */
+  /** Used in the URL: the group's short name, or an agent chat's own id */
   slug: string;
-  /** Group name as people read it ("Product design"), or the agent chat title */
+  /** Group name as people read it ("Creative"), or an agent chat's title */
   name: string;
   /** A group's icon, shown where Slack would show "#" */
   emoji?: string;
@@ -81,6 +97,8 @@ export interface Conversation {
   /** Who added each agent, for the members panel */
   agentAddedBy: Record<string, string>;
   createdAt: string;
+  /** When you pinned a group; pinned groups lead the sidebar's groups, oldest pin first */
+  pinnedAt?: string;
 }
 
 export interface Mention {
@@ -115,7 +133,32 @@ export interface Message {
   mentions: Mention[];
   output?: { outputId: string; version: number };
   choice?: MessageChoice;
+  /** Library files attached when it was sent */
+  fileIds?: string[];
+  /** An agent saying hello after it was added to a group; its avatar hops in once */
+  intro?: boolean;
+  /** Another agent brought this one in to help: the asking agent's id */
+  consultedBy?: string;
   createdAt: string;
+}
+
+/** A file picked in the message box, before it's sent. */
+export interface AttachmentDraft {
+  id: string;
+  name: string;
+  type: LibraryFileType;
+  size: string;
+  /** Object URL for PDFs and images, so the Library can preview them */
+  previewUrl?: string;
+}
+
+/** What the message box hands over when you send. */
+export interface MessageDraft {
+  text: string;
+  mentions: Mention[];
+  attachments: AttachmentDraft[];
+  /** An output shared from one of your agent chats; it goes with the message as its card */
+  output?: { outputId: string; version: number };
 }
 
 export type OutputBlock =
@@ -136,9 +179,11 @@ export interface Output {
   /** Label such as "Spec" or "Report" */
   kind: string;
   versions: OutputVersion[];
+  /** Groups an output from your private agent chat was shared to; until then only you see it */
+  sharedThreadIds?: string[];
 }
 
-export type LibraryFileType = "pdf" | "image" | "zip" | "design";
+export type LibraryFileType = "pdf" | "image" | "zip" | "design" | "document";
 
 export interface LibraryFile {
   id: string;
@@ -149,6 +194,10 @@ export interface LibraryFile {
   threadId: string;
   uploadedBy: string;
   uploadedAt: string;
+  /** Mock renders of a seeded PDF's pages or image, in public/files/ */
+  previewPages?: string[];
+  /** A PDF or image attached in this session previews as itself (object URL) */
+  previewUrl?: string;
 }
 
 export interface Todo {
@@ -166,7 +215,7 @@ export interface Todo {
   createdAt: string;
 }
 
-export type ActivityKind = "mention" | "output" | "invite" | "todo";
+export type ActivityKind = "mention" | "output" | "todo";
 
 export interface ActivityItem {
   id: string;
@@ -180,10 +229,4 @@ export interface ActivityItem {
   outputId?: string;
   createdAt: string;
   read: boolean;
-}
-
-/** A recency group in an agent's chat history list. */
-export interface ChatHistoryGroup {
-  label: string;
-  chats: { id: string; title: string }[];
 }
