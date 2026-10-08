@@ -1,28 +1,13 @@
 <template>
   <div :class="rootClass">
-    <!-- Members can name an unnamed group, or rename any group -->
-    <MpTooltip
-      v-if="isMember(conversation)"
-      id="rename-group-tooltip"
-      :label="renameLabel"
-      use-portal
-    >
-      <MpButton
-        is-rounded
-        variant="ghost"
-        left-icon="edit"
-        :aria-label="renameLabel"
-        @click="emit('rename')"
-      />
-    </MpTooltip>
-
+    <!-- ═════ Who's here: faces and a count; opens Members ═════ -->
     <button
       type="button"
-      :class="membersButtonClass"
-      :data-active="isMembersOpen || undefined"
-      :aria-label="`${total} members. ${isMembersOpen ? 'Hide' : 'Show'} member list`"
-      :aria-pressed="isMembersOpen"
-      @click="emit('toggleMembers')"
+      :class="[pillClass, membersButtonClass]"
+      :data-active="openView === 'members' || undefined"
+      :aria-label="`${total} members. ${openView === 'members' ? 'Hide' : 'Show'} member list`"
+      :aria-pressed="openView === 'members'"
+      @click="emit('toggle', 'members')"
     >
       <span :class="stackClass">
         <span
@@ -36,50 +21,114 @@
       </span>
       <MpText color="text.secondary">{{ total }}</MpText>
     </button>
+
+    <!-- ═════ Files: a page and a count, as in Claude Cowork. It opens a menu first, like Claude
+         Code's view menu: Artifacts & files, or Connectors, each in its own panel ═════ -->
+    <MpPopover
+      :id="`files-menu-${conversation.id}`"
+      v-slot="{ onClosePopover }"
+      placement="bottom-end"
+      use-portal
+      :is-keep-alive="false"
+    >
+      <MpPopoverTrigger>
+        <button
+          type="button"
+          :class="[pillClass, filesButtonClass]"
+          :data-active="openView === 'files' || openView === 'connectors' || undefined"
+          :aria-label="`${fileCount} ${fileCount === 1 ? 'file' : 'files'}. Files, artifacts and connectors`"
+        >
+          <MpIcon name="doc" size="md" color="icon.default" />
+          <MpText color="text.secondary">{{ fileCount }}</MpText>
+        </button>
+      </MpPopoverTrigger>
+      <MpPopoverContent :class="menuClass">
+        <MpPopoverList :class="menuListClass">
+          <MpPopoverListItem
+            v-for="item in menu"
+            :key="item.view"
+            :is-active="openView === item.view"
+            @click="choose(item.view, onClosePopover)"
+          >
+            <span :class="menuItemClass">
+              <MpIcon :name="item.icon" size="sm" />
+              <MpText :class="css({ flex: '1' })">{{ item.label }}</MpText>
+              <MpText color="text.secondary">{{ item.count }}</MpText>
+            </span>
+          </MpPopoverListItem>
+        </MpPopoverList>
+      </MpPopoverContent>
+    </MpPopover>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { css, MpButton, MpText, MpTooltip } from "@mekari/pixel3";
+import {
+  css,
+  MpIcon,
+  MpPopover,
+  MpPopoverContent,
+  MpPopoverList,
+  MpPopoverListItem,
+  MpPopoverTrigger,
+  MpText,
+  type IconName
+} from "@mekari/pixel3";
 import MemberAvatar from "~/components/shared/MemberAvatar.vue";
-import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
+import {
+  useConversationDetails,
+  type ConversationPanelView
+} from "~/composables/useConversationDetails";
 import type { Actor, Conversation } from "~/data/types";
 
 interface ConversationHeaderActionsProps {
+  /** A group or an agent chat */
   conversation: Conversation;
-  isMembersOpen?: boolean;
+  /** The side panel that's open, if it's one of these */
+  openView?: ConversationPanelView | null;
 }
 
 const props = defineProps<ConversationHeaderActionsProps>();
-const emit = defineEmits<{ toggleMembers: []; rename: [] }>();
+const emit = defineEmits<{ toggle: [view: ConversationPanelView] }>();
 
-const { isMember } = useWorkspaceStore();
+const { agentsIn, filesIn } = useConversationDetails();
 
-const renameLabel = computed(() =>
-  props.conversation.isUnnamed ? "Name this group" : "Rename group"
-);
+const agentIds = computed(() => agentsIn(props.conversation));
+const total = computed(() => props.conversation.memberIds.length + agentIds.value.length);
+const fileCount = computed(() => filesIn(props.conversation).length);
 
-const total = computed(
-  () => props.conversation.memberIds.length + props.conversation.agentIds.length
-);
+const menu = computed<
+  { view: ConversationPanelView; label: string; icon: IconName; count: number }[]
+>(() => [
+  { view: "files", label: "Artifacts & files", icon: "folder-close", count: fileCount.value },
+  {
+    view: "connectors",
+    label: "Connectors",
+    icon: "connected_apps",
+    count: props.conversation.connectors?.length ?? 0
+  }
+]);
+
+function choose(view: ConversationPanelView, close: () => void) {
+  close();
+  emit("toggle", view);
+}
 
 // People first, then agents, so the stack shows who's in the room at a glance.
 const previewActors = computed<Actor[]>(() => [
   ...props.conversation.memberIds.slice(0, 3).map((id) => ({ kind: "person" as const, id })),
-  ...props.conversation.agentIds.slice(0, 2).map((id) => ({ kind: "agent" as const, id }))
+  ...agentIds.value.slice(0, 2).map((id) => ({ kind: "agent" as const, id }))
 ]);
 
 const rootClass = css({ display: "flex", alignItems: "center", gap: "2" });
 
-// A pill: faces on the left, a quiet count on the right.
-const membersButtonClass = css({
+// Both header buttons are pills of the same height: an icon or faces, then a quiet count.
+const pillClass = css({
   display: "inline-flex",
   alignItems: "center",
   gap: "2",
   h: "9",
-  pl: "1.5",
-  pr: "10px",
   rounded: "full",
   borderWidth: "1px",
   borderColor: "border.default",
@@ -89,6 +138,17 @@ const membersButtonClass = css({
   _focusVisible: { outline: "2px solid", outlineColor: "border.focused", outlineOffset: "2px" },
   "&[data-active]": { borderColor: "border.selected", bg: "background.brand" }
 });
+
+const membersButtonClass = css({ pl: "1.5", pr: "10px" });
+
+const filesButtonClass = css({ gap: "1.5", pl: "2.5", pr: "3" });
+
+const menuClass = css({ w: "240px" });
+
+// Pixel's list pads 12px above and 8px below; 4px on both keeps the menu compact and even.
+const menuListClass = css({ py: "1" });
+
+const menuItemClass = css({ display: "flex", alignItems: "center", gap: "3", w: "full" });
 
 const stackClass = css({
   display: "inline-flex",

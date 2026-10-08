@@ -10,10 +10,13 @@
     - Group: thread with day dividers and grouped messages, your own on the right; system
       messages for membership changes; an intro with the group's description
     - @mention list (agents first), "<agent> is writing…", scripted reply with output card
-    - Output canvas (versions, copy, close) and members panel, one at a time
+    - One side panel at a time: the output canvas (versions, copy, close), a file preview,
+      Members (the faces in the header), or Files or Connectors (the header's ⋮ menu). An
+      output or file opened from Files goes back to it when closed
+    - Group name: hovering it shows a chevron; clicking it renames the group (members only)
     - Not a member yet: Join bar instead of the composer
     - Unnamed group (started from New chat): its members' faces and names as the title, and
-      "Name this group" in the intro; the header's pencil names or renames any group
+      "Name this group" in the intro
     - Unknown group: in-shell not-found message
 -->
 <template>
@@ -25,12 +28,27 @@
         <template v-if="group.isUnnamed" #leading>
           <GroupFaces :person-ids="group.memberIds" :agent-ids="group.agentIds" size="lg" />
         </template>
+        <template #title>
+          <MpText as="h1" size="h1" :class="titleClass">
+            <button
+              v-if="isMember(group)"
+              type="button"
+              class="group"
+              :class="titleButtonClass"
+              :aria-label="`${label}. ${group.isUnnamed ? 'Name this group' : 'Rename group'}`"
+              @click="isRenameOpen = true"
+            >
+              <span :class="titleTextClass">{{ label }}</span>
+              <MpIcon name="chevrons-down" size="sm" color="icon.default" :class="chevronClass" />
+            </button>
+            <template v-else>{{ label }}</template>
+          </MpText>
+        </template>
         <template #actions>
           <ConversationHeaderActions
             :conversation="group"
-            :is-members-open="panel?.kind === 'members'"
-            @toggle-members="toggleMembers"
-            @rename="isRenameOpen = true"
+            :open-view="openView"
+            @toggle="togglePanel"
           />
         </template>
       </PageHeader>
@@ -83,15 +101,24 @@
               :key="`output-${panel.outputId}`"
               :output-id="panel.outputId"
               :version="panel.version"
-              @close="panel = null"
+              @close="closePreview"
               @update:version="setOutputVersion"
             />
-            <ConversationMembersPanel
-              v-else-if="panel?.kind === 'members'"
-              key="members"
+            <FilePreview
+              v-else-if="panel?.kind === 'file'"
+              :key="`file-${panel.fileId}`"
+              :file-id="panel.fileId"
+              @close="closePreview"
+            />
+            <ConversationSidePanel
+              v-else-if="panel?.kind === 'view'"
+              :key="panel.view"
               :conversation="group"
+              :view="panel.view"
               @close="panel = null"
               @add="isAddOpen = true"
+              @open-output="(outputId, version) => openOutput(outputId, version, true)"
+              @open-file="openFile"
             />
           </SidePanelTransition>
         </div>
@@ -123,19 +150,21 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
-import { css, toast, MpButton, MpText } from "@mekari/pixel3";
+import { css, toast, MpButton, MpIcon, MpText } from "@mekari/pixel3";
 import PageContent from "~/components/layout/PageContent.vue";
 import PageHeader from "~/components/layout/PageHeader.vue";
 import SidePanelTransition from "~/components/layout/SidePanelTransition.vue";
+import FilePreview from "~/components/pages/FilePreview.vue";
 import GroupFaces from "~/components/shared/GroupFaces.vue";
 import AddMembersModal from "~/components/thread/AddMembersModal.vue";
 import ConversationHeaderActions from "~/components/thread/ConversationHeaderActions.vue";
-import ConversationMembersPanel from "~/components/thread/ConversationMembersPanel.vue";
+import ConversationSidePanel from "~/components/thread/ConversationSidePanel.vue";
 import JoinChannelBar from "~/components/thread/JoinChannelBar.vue";
 import OutputCanvas from "~/components/thread/OutputCanvas.vue";
 import RenameGroupModal from "~/components/thread/RenameGroupModal.vue";
 import ThreadView from "~/components/thread/ThreadView.vue";
 import { useChatStore } from "~/composables/useChatStore";
+import type { ConversationPanelView } from "~/composables/useConversationDetails";
 import { useCurrentWorkspace } from "~/composables/useCurrentWorkspace";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 import { AIRENE_ID, getAgent } from "~/data/agents";
@@ -144,7 +173,11 @@ import type { MessageDraft } from "~/data/types";
 import { toMentionables } from "~/utils/directory";
 import { formatList } from "~/utils/format";
 
-type Panel = { kind: "members" } | { kind: "output"; outputId: string; version: number };
+/** `fromFiles`: opened from the Files panel, which comes back when it's closed. */
+type Panel =
+  | { kind: "view"; view: ConversationPanelView }
+  | { kind: "output"; outputId: string; version: number; fromFiles?: boolean }
+  | { kind: "file"; fileId: string; fromFiles?: boolean };
 
 const route = useRoute();
 const { workspace } = useCurrentWorkspace();
@@ -218,12 +251,24 @@ onBeforeUnmount(() => leaveThread(viewingThreadId));
 
 useHead({ title: () => title.value || "Group not found" });
 
-function toggleMembers() {
-  panel.value = panel.value?.kind === "members" ? null : { kind: "members" };
+/** Members, Files or Connectors, when one of them is the open panel. */
+const openView = computed(() => (panel.value?.kind === "view" ? panel.value.view : null));
+
+function togglePanel(view: ConversationPanelView) {
+  panel.value = openView.value === view ? null : { kind: "view", view };
 }
 
-function openOutput(outputId: string, version: number) {
-  panel.value = { kind: "output", outputId, version };
+function openOutput(outputId: string, version: number, fromFiles = false) {
+  panel.value = { kind: "output", outputId, version, fromFiles };
+}
+
+function openFile(fileId: string) {
+  panel.value = { kind: "file", fileId, fromFiles: true };
+}
+
+function closePreview() {
+  const fromFiles = panel.value?.kind !== "view" && panel.value?.fromFiles;
+  panel.value = fromFiles ? { kind: "view", view: "files" } : null;
 }
 
 function setOutputVersion(version: number) {
@@ -258,6 +303,37 @@ const pageClass = css({ display: "flex", flexDirection: "column", flex: "1", min
 const workspaceClass = css({ display: "flex", h: "full", overflow: "hidden" });
 
 const introClass = css({ display: "flex", flexDirection: "column", gap: "1", px: "6", pb: "2" });
+
+// Nudged 8px left so the name lines up with the page while its button has room for the wash.
+// An offset rather than a negative margin, which would make the header measure it too narrow.
+const titleClass = css({ position: "relative", left: "-8px", minW: "0", maxW: "full" });
+
+// The name is a button for members: hovering shows a soft wash and a chevron, like a menu.
+const titleButtonClass = css({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "1.5",
+  maxW: "full",
+  px: "2",
+  rounded: "md",
+  font: "inherit",
+  color: "inherit",
+  cursor: "pointer",
+  transition: "background-color .15s ease",
+  _hover: { bg: "background.neutral.subtle.hovered" },
+  _focusVisible: { outline: "2px solid", outlineColor: "border.focused" }
+});
+
+const titleTextClass = css({ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" });
+
+const chevronClass = css({
+  flexShrink: "0",
+  opacity: "0",
+  transition: "opacity .15s ease",
+  _groupHover: { opacity: "1" },
+  ".group:focus-visible &": { opacity: "1" },
+  _motionReduce: { transition: "none" }
+});
 
 // A text link under the intro, so it sits at the start of the line like the text above.
 const nameLinkClass = css({ alignSelf: "flex-start" });

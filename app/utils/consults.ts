@@ -32,3 +32,15 @@ export function groupConsults(messages: Message[]): (Message | ConsultRun)[] {
 export function isConsultRun(item: Message | ConsultRun): item is ConsultRun {
   return "by" in item;
 }
+
+/** Agents that answered in a chat besides its own ones: the agents they consulted. */
+export function consultedAgentIds(messages: Message[], ownIds: string[]): string[] {
+  const own = new Set(ownIds);
+  return [
+    ...new Set(
+      messages
+        .filter((message) => message.sender.kind === "agent" && !own.has(message.sender.id))
+        .map((message) => message.sender.id)
+    )
+  ];
+}

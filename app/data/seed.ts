@@ -84,6 +84,7 @@ function buildThreads(seed: WorkspaceSeed): { messages: Message[]; outputs: Outp
           templateKey: template.key,
           title: template.title,
           kind: template.kind,
+          format: template.format,
           versions: []
         };
         if (!existing) outputs.push(output);
@@ -124,6 +125,7 @@ function buildThreads(seed: WorkspaceSeed): { messages: Message[]; outputs: Outp
                 pickedBy: picked?.by
               }
             : undefined,
+        fileIds: entry.files,
         consultedBy: entry.consultedBy,
         createdAt: entry.at
       });

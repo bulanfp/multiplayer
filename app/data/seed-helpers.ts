@@ -1,6 +1,13 @@
 import { AIRENE_ID } from "~/data/agents";
 import { CURRENT_USER_ID } from "~/data/people";
-import type { ActivityItem, Conversation, LibraryFile, Todo, Workspace } from "~/data/types";
+import type {
+  ActivityItem,
+  Conversation,
+  ConversationConnector,
+  LibraryFile,
+  Todo,
+  Workspace
+} from "~/data/types";
 import { unnamedGroupTitle } from "~/utils/group-name";
 
 // Shapes and helpers for writing the mock content in one readable file.
@@ -18,6 +25,8 @@ export interface ThreadEntry {
   prefix?: string;
   /** Another agent brought this one in: the asking agent's id */
   consultedBy?: string;
+  /** Files attached to the message, by id from the seed's `files` */
+  files?: string[];
   /** Posts an output from one of your agent chats into this group */
   shared?: { threadId: string; output: string; version?: number };
   /** The agent asks with options instead of writing yet; `picked` if someone answered */
@@ -44,10 +53,18 @@ export function outputId(threadId: string, templateKey: string): string {
 }
 
 export function createConversationHelpers(workspaceId: string, prefix: string) {
-  /** A group; `slug` is its URL and id suffix, e.g. "social-media". Airene is always in it. */
+  /**
+   * A group; `slug` is its URL and id suffix, e.g. "social-media". Airene is always in it.
+   * `connectors` are the apps it's connected to (Figma, Google Docs, Google Chat).
+   */
   function channel(
     slug: string,
-    group: { name: string; emoji: string; description: string },
+    group: {
+      name: string;
+      emoji: string;
+      description: string;
+      connectors?: ConversationConnector[];
+    },
     memberIds: string[],
     agents: { ids: string[]; addedBy: string },
     createdAt: string
@@ -64,7 +81,8 @@ export function createConversationHelpers(workspaceId: string, prefix: string) {
       memberIds,
       agentIds,
       agentAddedBy: Object.fromEntries(agentIds.map((id) => [id, agents.addedBy])),
-      createdAt
+      createdAt,
+      connectors: group.connectors
     };
   }
 
@@ -102,7 +120,8 @@ export function createConversationHelpers(workspaceId: string, prefix: string) {
     slug: string,
     title: string,
     agentId: string,
-    createdAt: string
+    createdAt: string,
+    connectors?: ConversationConnector[]
   ): Conversation {
     return {
       id: `${prefix}-chat-${slug}`,
@@ -113,7 +132,8 @@ export function createConversationHelpers(workspaceId: string, prefix: string) {
       memberIds: [CURRENT_USER_ID],
       agentIds: [agentId],
       agentAddedBy: { [agentId]: CURRENT_USER_ID },
-      createdAt
+      createdAt,
+      connectors
     };
   }
 

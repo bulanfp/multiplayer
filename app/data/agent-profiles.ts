@@ -33,7 +33,7 @@ export const AGENT_PROFILES: Record<string, AgentProfile> = {
       },
       {
         title: "Finding things",
-        description: "Files and outputs shared in your groups, from the Library."
+        description: "Files and artifacts shared in your groups, from the Library."
       }
     ],
     sources: ["Your groups", "Library"],
@@ -50,7 +50,7 @@ export const AGENT_PROFILES: Record<string, AgentProfile> = {
           },
           {
             name: "Search the Library",
-            description: "Find outputs and files shared in your groups.",
+            description: "Find artifacts and files shared in your groups.",
             effect: "read",
             approval: "auto"
           },

@@ -9,9 +9,12 @@
         <span v-if="$slots.leading" :class="leadingClass">
           <slot name="leading" />
         </span>
-        <MpText as="h1" size="h1" is-truncated :class="css({ flexShrink: '0', maxW: 'full' })">
-          {{ title }}
-        </MpText>
+        <!-- A page can make its title interactive, e.g. a group's name opens Rename -->
+        <slot name="title">
+          <MpText as="h1" size="h1" is-truncated :class="css({ flexShrink: '0', maxW: 'full' })">
+            {{ title }}
+          </MpText>
+        </slot>
         <MpText v-if="subtitle" color="text.secondary" is-truncated :class="css({ minW: '0' })">
           {{ subtitle }}
         </MpText>

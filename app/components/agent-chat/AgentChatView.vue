@@ -1,7 +1,7 @@
 <template>
   <div :class="splitClass">
     <section :class="mainClass" :aria-label="chat?.name ?? `New chat with ${agent.name}`">
-      <!-- ═════ Which chat this is, and that it's yours alone ═════ -->
+      <!-- ═════ Which chat this is, that it's yours alone, who's in it, and More ═════ -->
       <header v-if="chat" :class="chatHeaderClass">
         <MpText weight="semiBold" is-truncated>{{ chat.name }}</MpText>
         <MpTooltip :id="`private-${chat.id}`" label="Only you can see this chat" use-portal>
@@ -9,6 +9,12 @@
             <MpIcon name="security" size="sm" color="icon.default" />
           </span>
         </MpTooltip>
+        <ConversationHeaderActions
+          :conversation="chat"
+          :open-view="openView"
+          :class="headerActionsClass"
+          @toggle="togglePanel"
+        />
       </header>
 
       <!-- ═════ The chat ═════ -->
@@ -101,16 +107,31 @@
       </div>
     </section>
 
-    <!-- ═════ Canvas: an output from this chat ═════ -->
+    <!-- ═════ Side panel: an output, a file, Members, Files or Connectors ═════ -->
     <SidePanelTransition>
       <OutputCanvas
-        v-if="activeOutput"
-        :key="`output-${activeOutput.id}`"
-        :output-id="activeOutput.id"
-        :version="activeOutput.version"
+        v-if="panel?.kind === 'output'"
+        :key="`output-${panel.id}`"
+        :output-id="panel.id"
+        :version="panel.version"
         :source-label="`from your chat with ${agent.name}`"
-        @close="activeOutput = null"
-        @update:version="activeOutput = { id: activeOutput.id, version: $event }"
+        @close="closePreview"
+        @update:version="setOutputVersion"
+      />
+      <FilePreview
+        v-else-if="panel?.kind === 'file'"
+        :key="`file-${panel.fileId}`"
+        :file-id="panel.fileId"
+        @close="closePreview"
+      />
+      <ConversationSidePanel
+        v-else-if="panel?.kind === 'view' && chat"
+        :key="panel.view"
+        :conversation="chat"
+        :view="panel.view"
+        @close="panel = null"
+        @open-output="(outputId, version) => openOutput(outputId, version, true)"
+        @open-file="openFile"
       />
     </SidePanelTransition>
   </div>
@@ -121,11 +142,15 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { css, MpButton, MpIcon, MpText, MpTooltip } from "@mekari/pixel3";
 import AgentChatMessage from "~/components/agent-chat/AgentChatMessage.vue";
 import SidePanelTransition from "~/components/layout/SidePanelTransition.vue";
+import FilePreview from "~/components/pages/FilePreview.vue";
 import AgentMascot from "~/components/shared/AgentMascot.vue";
 import ConsultLabel from "~/components/thread/ConsultLabel.vue";
+import ConversationHeaderActions from "~/components/thread/ConversationHeaderActions.vue";
+import ConversationSidePanel from "~/components/thread/ConversationSidePanel.vue";
 import MessageComposer from "~/components/thread/MessageComposer.vue";
 import OutputCanvas from "~/components/thread/OutputCanvas.vue";
 import { useChatStore, type SendContext } from "~/composables/useChatStore";
+import type { ConversationPanelView } from "~/composables/useConversationDetails";
 import { useWorkspaceStore } from "~/composables/useWorkspaceStore";
 import { AIRENE_ID } from "~/data/agents";
 import type { Agent, Conversation, Message, MessageDraft, Workspace } from "~/data/types";
@@ -158,8 +183,17 @@ const {
   stopReplies
 } = useChatStore();
 
+/** `fromFiles`: opened from the Files panel, which comes back when it's closed. */
+type Panel =
+  | { kind: "view"; view: ConversationPanelView }
+  | { kind: "output"; id: string; version: number; fromFiles?: boolean }
+  | { kind: "file"; fileId: string; fromFiles?: boolean };
+
 const scrollRef = ref<HTMLElement | null>(null);
-const activeOutput = ref<{ id: string; version: number } | null>(null);
+const panel = ref<Panel | null>(null);
+const activeOutput = computed(() =>
+  panel.value?.kind === "output" ? { id: panel.value.id, version: panel.value.version } : null
+);
 
 const messages = computed(() => (props.chat ? messagesFor(props.chat.id) : []));
 const typing = computed(() => (props.chat ? typingIn(props.chat.id) : []));
@@ -197,9 +231,15 @@ watch(
     viewingThreadId = id;
     setActiveThread(id ?? null);
     const output = typeof outputId === "string" ? getOutput(outputId) : undefined;
-    activeOutput.value = output
-      ? { id: output.id, version: Number(version) || output.versions.length }
-      : null;
+    if (output) {
+      panel.value = {
+        kind: "output",
+        id: output.id,
+        version: Number(version) || output.versions.length
+      };
+    } else {
+      panel.value = null;
+    }
     nextTick(() => scrollToEnd(true));
   },
   { immediate: true }
@@ -250,8 +290,28 @@ function pick(messageId: string, optionId: string) {
   if (props.chat) pickOption(contextFor(props.chat), messageId, optionId);
 }
 
-function openOutput(outputId: string, version: number) {
-  activeOutput.value = { id: outputId, version };
+/** Members, Files or Connectors, when one of them is the open panel. */
+const openView = computed(() => (panel.value?.kind === "view" ? panel.value.view : null));
+
+function togglePanel(view: ConversationPanelView) {
+  panel.value = openView.value === view ? null : { kind: "view", view };
+}
+
+function openOutput(outputId: string, version: number, fromFiles = false) {
+  panel.value = { kind: "output", id: outputId, version, fromFiles };
+}
+
+function openFile(fileId: string) {
+  panel.value = { kind: "file", fileId, fromFiles: true };
+}
+
+function setOutputVersion(version: number) {
+  if (panel.value?.kind === "output") panel.value = { ...panel.value, version };
+}
+
+function closePreview() {
+  const fromFiles = panel.value?.kind !== "view" && panel.value?.fromFiles;
+  panel.value = fromFiles ? { kind: "view", view: "files" } : null;
 }
 
 // Ready to type as soon as the chat opens.
@@ -282,6 +342,9 @@ const chatHeaderClass = css({
   pt: "4",
   pb: "2"
 });
+
+// Pushed to the right end of the chat's header.
+const headerActionsClass = css({ ml: "auto" });
 
 const privateClass = css({
   display: "inline-flex",

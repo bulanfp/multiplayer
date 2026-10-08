@@ -7,6 +7,7 @@ import {
   type AgentIntent
 } from "~/data/agent-scripts";
 import { OUTPUT_TEMPLATES, type OutputTemplateVersion } from "~/data/output-templates";
+import type { OutputFormat } from "~/data/types";
 
 export interface PickedReply {
   /** Reply text; "{sender}" still needs filling */
@@ -16,6 +17,7 @@ export interface PickedReply {
     templateKey: string;
     title: string;
     kind: string;
+    format?: OutputFormat;
     version: OutputTemplateVersion;
   };
   /** The agent asks this (with options) instead of writing the output yet */
@@ -73,7 +75,13 @@ export function pickOutputReply(outputKey: string, versionCount: number): Picked
   return {
     reply: version.reply,
     title: template.title,
-    output: { templateKey: template.key, title: template.title, kind: template.kind, version }
+    output: {
+      templateKey: template.key,
+      title: template.title,
+      kind: template.kind,
+      format: template.format,
+      version
+    }
   };
 }
 

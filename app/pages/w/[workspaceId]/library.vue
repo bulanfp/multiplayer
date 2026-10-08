@@ -93,7 +93,7 @@
               <MpFlex v-else direction="column" alignItems="center" gap="1" paddingY="10">
                 <MpText weight="semiBold">Nothing here yet</MpText>
                 <MpText color="text.secondary">
-                  Outputs your agents create and files your team shares show up here.
+                  Artifacts your agents create and files your team shares show up here.
                 </MpText>
               </MpFlex>
             </template>
@@ -187,7 +187,7 @@ const COLUMNS: EnterpriseTableColumn<LibraryRowData>[] = [
 
 const ROWS_PER_PAGE = [10, 25, 50];
 
-const TABS = ["All", "Outputs", "Files"];
+const TABS = ["All", "Artifacts", "Files"];
 
 const { workspace } = useCurrentWorkspace();
 const { outputsFor, filesFor, getOutput, getFile } = useChatStore();

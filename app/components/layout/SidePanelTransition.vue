@@ -10,6 +10,9 @@
   just past the edge, and easing it to its normal margin slides it in while the
   conversation narrows alongside. The panel keeps its width, so nothing inside reflows.
   Global on purpose: transition classes land on the slotted panel, which scoped styles miss.
+  Each panel must render one element at its root, with no comment before it: the dev server
+  keeps comments, which makes the root a fragment, and out-in mode then waits forever for it
+  to leave, so the next panel never opens.
 -->
 <style>
 /* An even ease in and out (no fast start), so the slide feels unhurried. */

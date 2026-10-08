@@ -31,7 +31,7 @@
       </div>
       <MpFlex v-else direction="column" gap="1" paddingY="10" alignItems="center">
         <MpText weight="semiBold">Nothing here yet</MpText>
-        <MpText color="text.secondary"> Mentions, agent outputs and todos show up here. </MpText>
+        <MpText color="text.secondary"> Mentions, agent artifacts and todos show up here. </MpText>
       </MpFlex>
     </PageContent>
   </div>
@@ -52,7 +52,7 @@ import { threadPath } from "~/utils/paths";
 const TABS: { label: string; kind?: ActivityKind }[] = [
   { label: "All" },
   { label: "Mentions", kind: "mention" },
-  { label: "Outputs", kind: "output" },
+  { label: "Artifacts", kind: "output" },
   { label: "Todos", kind: "todo" }
 ];
 

@@ -1,5 +1,13 @@
-import { toast } from "@mekari/pixel3";
-import type { Output, OutputBlock } from "~/data/types";
+import { toast, type IconName } from "@mekari/pixel3";
+import type { Output, OutputBlock, OutputFormat } from "~/data/types";
+
+/** How each artifact format is labelled and drawn: what it opens as in the canvas. */
+export const OUTPUT_FORMATS: Record<OutputFormat, { label: string; icon: IconName }> = {
+  doc: { label: "Doc", icon: "doc" },
+  sheet: { label: "Sheet", icon: "table-view-column" },
+  slides: { label: "Slides", icon: "dashboard" },
+  html: { label: "HTML", icon: "file-code" }
+};
 
 function blocksToText(blocks: OutputBlock[]): string {
   return blocks

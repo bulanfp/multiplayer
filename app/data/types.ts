@@ -74,6 +74,19 @@ export interface Workspace {
   agentIds: string[];
 }
 
+/** Apps a group or an agent chat can be connected to, so its agents can read and post there. */
+export type ConnectorId = "figma" | "google-docs" | "google-chat";
+
+/** A connector added to a conversation, and what it's linked to there. */
+export interface ConversationConnector {
+  id: ConnectorId;
+  /** Person who connected it, and when */
+  addedBy: string;
+  addedAt: string;
+  /** Figma files, Google Docs or Google Chat spaces it's linked to here */
+  items: string[];
+}
+
 /**
  * "channel" is a group in the UI: people and agents, with Airene always among them.
  * "agent" is one of your private chats with an agent; you can have many with each agent.
@@ -104,6 +117,8 @@ export interface Conversation {
    * after its members and shows their faces instead of an emoji until someone names it.
    */
   isUnnamed?: boolean;
+  /** Apps this group or agent chat is connected to */
+  connectors?: ConversationConnector[];
 }
 
 export interface Mention {
@@ -175,6 +190,9 @@ export interface OutputVersion {
   blocks: OutputBlock[];
 }
 
+/** What an artifact is, as it opens in the canvas: a doc, a sheet, slides or an HTML page. */
+export type OutputFormat = "doc" | "sheet" | "slides" | "html";
+
 export interface Output {
   id: string;
   workspaceId: string;
@@ -183,12 +201,15 @@ export interface Output {
   title: string;
   /** Label such as "Spec" or "Report" */
   kind: string;
+  /** Doc unless the template says otherwise */
+  format?: OutputFormat;
   versions: OutputVersion[];
   /** Groups an output from your private agent chat was shared to; until then only you see it */
   sharedThreadIds?: string[];
 }
 
-export type LibraryFileType = "pdf" | "image" | "zip" | "design" | "document";
+export type LibraryFileType =
+  "pdf" | "image" | "zip" | "design" | "document" | "spreadsheet" | "video";
 
 export interface LibraryFile {
   id: string;

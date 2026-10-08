@@ -1,4 +1,4 @@
-import type { OutputBlock } from "~/data/types";
+import type { OutputBlock, OutputFormat } from "~/data/types";
 
 // Scripted agent outputs. Each template lists its versions in order: the first time an
 // agent produces it in a conversation you get versions[0], asking again gives versions[1].
@@ -15,6 +15,8 @@ export interface OutputTemplate {
   key: string;
   title: string;
   kind: string;
+  /** How it opens in the canvas; a doc when left out */
+  format?: OutputFormat;
   versions: OutputTemplateVersion[];
 }
 
@@ -244,6 +246,7 @@ const TEMPLATES: OutputTemplate[] = [
     key: "teaser-report",
     title: "Teaser week 1 report",
     kind: "Report",
+    format: "doc",
     versions: [
       {
         reply: "Teaser week 1 is in, {sender}. Reach is ahead of plan, clicks are behind.",
@@ -638,6 +641,7 @@ const TEMPLATES: OutputTemplate[] = [
     key: "paid-media-plan",
     title: "Launch month paid plan",
     kind: "Plan",
+    format: "sheet",
     versions: [
       {
         reply: "Here's the paid plan for launch month, {sender}.",
@@ -723,6 +727,95 @@ const TEMPLATES: OutputTemplate[] = [
             type: "paragraph",
             text: "Bisa, mulai 8 Nov. Minggu pertama khusus di toko dan aplikasi dulu, ya."
           }
+        ]
+      }
+    ]
+  },
+  // ─── Holiday Blend ads: the cost jump ──────────────────────────────────────
+  {
+    key: "cost-per-signup",
+    title: "Cost per sign-up by channel",
+    kind: "Breakdown",
+    format: "sheet",
+    versions: [
+      {
+        reply: "Here's cost per sign-up by channel for 1–7 Oct, {sender}.",
+        blocks: [
+          { type: "heading", text: "Cost per sign-up, 1–7 Oct" },
+          {
+            type: "list",
+            items: [
+              "Instagram: IDR 3,900 (1,240 sign-ups)",
+              "TikTok: IDR 6,800 (610 sign-ups), up from IDR 4,100 on Monday",
+              "Overall: IDR 4,850 (1,850 sign-ups)"
+            ]
+          },
+          { type: "heading", text: "Notes" },
+          {
+            type: "paragraph",
+            text: "TikTok's jump starts Tuesday, when the new creatives went live without the waitlist link in the first frame."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "cpm-comparison",
+    title: "TikTok vs Instagram CPM",
+    kind: "Chart",
+    format: "html",
+    versions: [
+      {
+        reply: "And an interactive chart of CPMs by day, {sender}. Hover a day to compare.",
+        blocks: [
+          { type: "heading", text: "TikTok vs Instagram CPM, 1–7 Oct" },
+          {
+            type: "list",
+            items: [
+              "Mon: TikTok IDR 38,000 · Instagram IDR 41,000",
+              "Tue: TikTok IDR 44,000 · Instagram IDR 41,500",
+              "Wed: TikTok IDR 46,500 · Instagram IDR 42,000",
+              "Thu: TikTok IDR 47,000 · Instagram IDR 42,500",
+              "Fri: TikTok IDR 46,800 · Instagram IDR 42,200"
+            ]
+          },
+          {
+            type: "paragraph",
+            text: "TikTok CPMs climb 22% from Monday as brands bid for the 10.10 sales. Instagram stays flat."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    key: "budget-shift",
+    title: "Budget shift proposal",
+    kind: "Proposal",
+    format: "slides",
+    versions: [
+      {
+        reply: "Four slides for Rizal on moving the budget, {sender}.",
+        blocks: [
+          { type: "heading", text: "Slide 1 · The ask" },
+          {
+            type: "paragraph",
+            text: "Move 15% of TikTok's budget (IDR 9 million) to Instagram until 11 Oct."
+          },
+          { type: "heading", text: "Slide 2 · Why" },
+          {
+            type: "list",
+            items: [
+              "TikTok CPMs are up 22% ahead of the 10.10 sales",
+              "Instagram's cost per sign-up is 43% lower this week"
+            ]
+          },
+          { type: "heading", text: "Slide 3 · What TikTok keeps" },
+          {
+            type: "paragraph",
+            text: "Creator posts and the launch reel, with the waitlist link in the first frame."
+          },
+          { type: "heading", text: "Slide 4 · When we switch back" },
+          { type: "paragraph", text: "12 Oct, once auction prices settle after the sales." }
         ]
       }
     ]

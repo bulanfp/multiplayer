@@ -45,7 +45,21 @@ export const CENTRAL_PERK: WorkspaceSeed = {
       {
         name: "Holiday Blend launch",
         emoji: "🚀",
-        description: "The seasonal blend in 40 stores, on social and in the app from 1 Nov"
+        description: "The seasonal blend in 40 stores, on social and in the app from 1 Nov",
+        connectors: [
+          {
+            id: "google-docs",
+            addedBy: "maya",
+            addedAt: dayAt(20, "09:30"),
+            items: ["Holiday Blend launch run sheet"]
+          },
+          {
+            id: "google-chat",
+            addedBy: "maya",
+            addedAt: dayAt(9, "10:30"),
+            items: ["Store managers", "Regional leads"]
+          }
+        ]
       },
       TEAM,
       { ids: [], addedBy: "maya" },
@@ -56,7 +70,15 @@ export const CENTRAL_PERK: WorkspaceSeed = {
       {
         name: "Holiday Blend visuals",
         emoji: "🎨",
-        description: "Key visual, posters and in-store for the Holiday Blend"
+        description: "Key visual, posters and in-store for the Holiday Blend",
+        connectors: [
+          {
+            id: "figma",
+            addedBy: "dewi",
+            addedAt: dayAt(20, "10:15"),
+            items: ["Holiday Blend key visual", "In-store posters"]
+          }
+        ]
       },
       ["rizal", "maya", "dewi", "kevin"],
       { ids: ["design-agent"], addedBy: "dewi" },
@@ -67,7 +89,21 @@ export const CENTRAL_PERK: WorkspaceSeed = {
       {
         name: "Holiday Blend copy",
         emoji: "✍️",
-        description: "Taglines, captions and in-app copy for the Holiday Blend"
+        description: "Taglines, captions and in-app copy for the Holiday Blend",
+        connectors: [
+          {
+            id: "google-docs",
+            addedBy: "maya",
+            addedAt: dayAt(20, "10:40"),
+            items: ["Holiday Blend copy deck"]
+          },
+          {
+            id: "figma",
+            addedBy: "kevin",
+            addedAt: dayAt(8, "15:00"),
+            items: ["Cup sleeve mockups"]
+          }
+        ]
       },
       ["rizal", "maya", "kevin"],
       { ids: ["copywriter"], addedBy: "maya" },
@@ -146,8 +182,24 @@ export const CENTRAL_PERK: WorkspaceSeed = {
 
     // ─── Your agent chats: private threads, several per agent ───────────────
     agentChat("kickoff-questions", "Kickoff open questions", "airene", dayAt(9, "11:00")),
-    agentChat("launch-week", "Plan launch week", "airene", minutesAgo(26)),
-    agentChat("cup-sleeve-copy", "Cup sleeve copy", "copywriter", dayAt(2, "10:10")),
+    agentChat("launch-week", "Plan launch week", "airene", minutesAgo(26), [
+      {
+        id: "google-docs",
+        addedBy: "rizal",
+        addedAt: minutesAgo(30),
+        items: ["Holiday Blend launch run sheet"]
+      },
+      { id: "google-chat", addedBy: "rizal", addedAt: minutesAgo(30), items: ["Store managers"] }
+    ]),
+    agentChat("cup-sleeve-copy", "Cup sleeve copy", "copywriter", dayAt(2, "10:10"), [
+      {
+        id: "google-docs",
+        addedBy: "rizal",
+        addedAt: dayAt(2, "10:05"),
+        items: ["Holiday Blend copy deck"]
+      },
+      { id: "figma", addedBy: "rizal", addedAt: dayAt(2, "10:05"), items: ["Cup sleeve mockups"] }
+    ]),
     agentChat(
       "best-teaser-caption",
       "Which teaser caption did best?",
@@ -435,6 +487,12 @@ export const CENTRAL_PERK: WorkspaceSeed = {
     ],
     "cp-holiday-blend-ads": [
       {
+        from: "maya",
+        at: dayAt(8, "09:50"),
+        text: "Q4 media budget is approved: IDR 180 million for paid, teaser and launch.",
+        files: ["file-cp-ads-budget"]
+      },
+      {
         from: "fajar",
         at: dayAt(8, "10:00"),
         text: "Paid teaser setup: Meta and TikTok at 60/40, optimising for waitlist sign-ups."
@@ -454,6 +512,12 @@ export const CENTRAL_PERK: WorkspaceSeed = {
         from: "campaign-analyst",
         at: dayAt(4, "09:31"),
         text: "For F&B teasers in Indonesia: 1.2–1.6% on Instagram and 0.8–1.2% on TikTok. Under 1% overall usually means the link comes too late in the reel or story."
+      },
+      {
+        from: "fajar",
+        at: minutesAgo(81),
+        text: "Exports from both platforms for 1–7 Oct.",
+        files: ["file-cp-ads-tiktok", "file-cp-ads-meta"]
       },
       { from: "fajar", at: minutesAgo(80), text: "Teaser week 1 numbers are in." },
       {
@@ -490,11 +554,37 @@ export const CENTRAL_PERK: WorkspaceSeed = {
         text: "Thanks, @Media buyer. @Fajar Nugroho, most of the jump is the 10.10 auction: CPMs are up 22%. The missing link explains the rest. Put the link back in the first frame and move 15% of the TikTok budget to Instagram until 11 Oct."
       },
       {
+        from: "fajar",
+        at: minutesAgo(66),
+        text: "@Campaign analyst show cost per sign-up by channel, and chart the CPMs."
+      },
+      { from: "campaign-analyst", at: minutesAgo(65), output: "cost-per-signup", for: "fajar" },
+      { from: "campaign-analyst", at: minutesAgo(64), output: "cpm-comparison", for: "fajar" },
+      {
         from: "maya",
         at: minutesAgo(50),
         text: "Clicks are low anyway. Let's move the waitlist link to the first frame everywhere."
       },
       { from: "fajar", at: minutesAgo(45), text: "Changing it now on all active ads." },
+      {
+        from: "fajar",
+        at: minutesAgo(44),
+        text: "New cut of the reel, with the link in the first frame.",
+        files: ["file-cp-ads-reel"]
+      },
+      {
+        from: "maya",
+        at: minutesAgo(40),
+        text: "Week 2 creatives, all with the link up front.",
+        files: ["file-cp-ads-creatives"]
+      },
+      {
+        from: "fajar",
+        at: minutesAgo(38),
+        text: "@Media buyer plan launch month spend, and put the TikTok to Instagram shift in slides for Rizal."
+      },
+      { from: "media-buyer", at: minutesAgo(37), output: "paid-media-plan", for: "fajar" },
+      { from: "media-buyer", at: minutesAgo(36), output: "budget-shift", for: "fajar" },
       {
         from: "fajar",
         at: minutesAgo(30),
@@ -832,6 +922,57 @@ export const CENTRAL_PERK: WorkspaceSeed = {
       uploadedBy: "kevin",
       uploadedAt: dayAt(1, "16:00"),
       previewPages: ["/files/hb-kol-shortlist.svg"]
+    },
+    // Holiday Blend ads: exports, creatives and the budget approval
+    {
+      id: "file-cp-ads-budget",
+      workspaceId: WORKSPACE_ID,
+      name: "Q4 media budget approval.pdf",
+      type: "pdf",
+      size: "1.2 MB",
+      threadId: "cp-holiday-blend-ads",
+      uploadedBy: "maya",
+      uploadedAt: dayAt(8, "09:50")
+    },
+    {
+      id: "file-cp-ads-tiktok",
+      workspaceId: WORKSPACE_ID,
+      name: "TikTok Ads export, 1–7 Oct.csv",
+      type: "spreadsheet",
+      size: "184 KB",
+      threadId: "cp-holiday-blend-ads",
+      uploadedBy: "fajar",
+      uploadedAt: minutesAgo(81)
+    },
+    {
+      id: "file-cp-ads-meta",
+      workspaceId: WORKSPACE_ID,
+      name: "Meta Ads export, 1–7 Oct.xlsx",
+      type: "spreadsheet",
+      size: "312 KB",
+      threadId: "cp-holiday-blend-ads",
+      uploadedBy: "fajar",
+      uploadedAt: minutesAgo(81)
+    },
+    {
+      id: "file-cp-ads-reel",
+      workspaceId: WORKSPACE_ID,
+      name: "Waitlist reel, link in first frame.mp4",
+      type: "video",
+      size: "38 MB",
+      threadId: "cp-holiday-blend-ads",
+      uploadedBy: "fajar",
+      uploadedAt: minutesAgo(44)
+    },
+    {
+      id: "file-cp-ads-creatives",
+      workspaceId: WORKSPACE_ID,
+      name: "Teaser creatives, week 2.zip",
+      type: "zip",
+      size: "148 MB",
+      threadId: "cp-holiday-blend-ads",
+      uploadedBy: "maya",
+      uploadedAt: minutesAgo(40)
     }
   ],
 
@@ -909,7 +1050,7 @@ export const CENTRAL_PERK: WorkspaceSeed = {
       workspaceId: WORKSPACE_ID,
       kind: "output",
       actor: { kind: "agent", id: "campaign-analyst" },
-      text: "finished an output",
+      text: "finished an artifact",
       excerpt: "Teaser week 1 report · v1",
       threadId: "cp-holiday-blend-ads",
       outputId: outputId("cp-holiday-blend-ads", "teaser-report"),
@@ -932,7 +1073,7 @@ export const CENTRAL_PERK: WorkspaceSeed = {
       workspaceId: WORKSPACE_ID,
       kind: "output",
       actor: { kind: "agent", id: "copywriter" },
-      text: "finished an output",
+      text: "finished an artifact",
       excerpt: "Holiday Blend taglines · v1",
       threadId: "cp-holiday-blend-copy",
       outputId: outputId("cp-holiday-blend-copy", "holiday-taglines"),

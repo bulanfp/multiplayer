@@ -197,7 +197,7 @@ function deliverReply(
   }
 
   if (picked.output) {
-    const { templateKey, title, kind, version } = picked.output;
+    const { templateKey, title, kind, format, version } = picked.output;
     let output = outputsHere.find((item) => item.templateKey === templateKey);
     if (!output) {
       output = {
@@ -207,6 +207,7 @@ function deliverReply(
         templateKey,
         title,
         kind,
+        format,
         versions: []
       };
       state.outputs.push(output);
@@ -219,7 +220,7 @@ function deliverReply(
         workspaceId: context.workspaceId,
         kind: "output",
         actor: { kind: "agent", id: agentId },
-        text: "finished an output",
+        text: "finished an artifact",
         excerpt: `${title} · v${output.versions.length}`,
         threadId: context.threadId,
         outputId: output.id

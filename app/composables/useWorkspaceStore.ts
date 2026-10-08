@@ -1,8 +1,9 @@
 import { reactive } from "vue";
 import { AIRENE_ID, getAgent } from "~/data/agents";
+import { getConnector } from "~/data/connectors";
 import { CURRENT_USER_ID, getPerson } from "~/data/people";
 import { SEED } from "~/data/seed";
-import type { Agent, Conversation, MessageDraft, Workspace } from "~/data/types";
+import type { Agent, ConnectorId, Conversation, MessageDraft, Workspace } from "~/data/types";
 import { useChatStore } from "~/composables/useChatStore";
 import { formatList } from "~/utils/format";
 import { toSlug, unnamedGroupTitle } from "~/utils/group-name";
@@ -337,6 +338,22 @@ function createAgentChat(
   return conversation;
 }
 
+/** Connects a group to an app, so its agents can use it there. Nothing is linked yet. */
+function addConnector(conversation: Conversation, connectorId: ConnectorId): void {
+  if (conversation.connectors?.some((item) => item.id === connectorId)) return;
+  conversation.connectors = [
+    ...(conversation.connectors ?? []),
+    { id: connectorId, addedBy: CURRENT_USER_ID, addedAt: new Date().toISOString(), items: [] }
+  ];
+  postSystemMessage(conversation.id, `${ME} connected ${getConnector(connectorId)?.name}`);
+}
+
+function removeConnector(conversation: Conversation, connectorId: ConnectorId): void {
+  if (!conversation.connectors?.some((item) => item.id === connectorId)) return;
+  conversation.connectors = conversation.connectors.filter((item) => item.id !== connectorId);
+  postSystemMessage(conversation.id, `${ME} disconnected ${getConnector(connectorId)?.name}`);
+}
+
 /** Pins a group to the top of the sidebar's groups, or unpins it. */
 function togglePin(conversation: Conversation) {
   conversation.pinnedAt = conversation.pinnedAt ? undefined : new Date().toISOString();
@@ -368,6 +385,8 @@ export function useWorkspaceStore() {
     createUnnamedGroup,
     renameGroup,
     addMembers,
+    addConnector,
+    removeConnector,
     createAgentChat,
     togglePin
   };

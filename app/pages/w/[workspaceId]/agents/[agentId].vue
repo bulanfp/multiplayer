@@ -244,7 +244,7 @@
                 </section>
 
                 <section :class="sectionClass">
-                  <MpText as="h3" size="h3">Recent outputs</MpText>
+                  <MpText as="h3" size="h3">Recent artifacts</MpText>
                   <ul v-if="outputs.length" :class="linksClass">
                     <li v-for="output in outputs" :key="output.id">
                       <NuxtLink :to="outputLink(output)" :class="linkClass">
@@ -255,7 +255,7 @@
                       </MpText>
                     </li>
                   </ul>
-                  <MpText v-else color="text.secondary">No outputs yet.</MpText>
+                  <MpText v-else color="text.secondary">No artifacts yet.</MpText>
                 </section>
               </div>
             </MpTabPanel>

@@ -60,7 +60,7 @@ app/
 │   ├── index.vue                    # Redirects to Airene's chats
 │   ├── w/[workspaceId]/
 │   │   ├── chat/[agentId]/[[chatId]].vue # An agent's chats: list, a chat or a new one, Share
-│   │   ├── c/[conversationId].vue   # A group: thread, preview, members, rename
+│   │   ├── c/[conversationId].vue   # A group: thread, side panels, rename from the title
 │   │   ├── c/new.vue                # A group from New chat, saved on the first message
 │   │   ├── activity.vue             # Mentions, outputs, todos (hidden from the rail)
 │   │   ├── library.vue              # Outputs and files; filters, search, and a preview panel
@@ -70,7 +70,7 @@ app/
 ├── components/
 │   ├── layout/                      # Shell: AppHeader (search, profile), AppRail, HomePanel (Agents and Groups), PageHeader, …
 │   ├── agent-chat/                  # An agent's chat list, the chat view, its messages, Share
-│   ├── thread/                      # Group ThreadView, MessageComposer (@mentions), OutputCard, OutputCanvas, ConsultLabel, members
+│   ├── thread/                      # Group ThreadView, MessageComposer (@mentions), OutputCard, OutputCanvas, ConsultLabel, side panels (Members; Files and connectors)
 │   ├── workspace/                   # New chat picker and the Create a group modal
 │   ├── pages/                       # Rows and cards for Activity, Todos and Agents
 │   ├── table/                       # EnterpriseTable, from Pixel's enterprise data table block
@@ -83,18 +83,20 @@ app/
 │   ├── agent-scripts.ts             # Keywords → which output an agent produces, and who it consults
 │   ├── output-templates.ts          # Output content, one entry per version
 │   ├── people.ts, agents.ts         # Directory; the current user is `rizal`
+│   ├── connectors.ts                # Apps a group can connect to: Figma, Google Docs, Google Chat
 │   └── seed.ts                      # Turns the mock content into the initial state
 └── utils/                           # Mentions, reply picking, consult groups, formatting, paths
 public/images/agents/                # Agent icons: design's HD 3D set at 256px; spares for custom agents
 public/images/agents/parts/          # Each icon split into body, eyes and any loose part (Airene's sparkle), for AgentMascot
 public/images/avatars/               # People avatars (memoji); unused ones are spares
+public/images/connectors/            # Google Docs and Google Chat logos (Figma uses Pixel's icon)
 scripts/split-agent-eyes.py          # Makes images/agents/parts/ and app/data/agent-mascots.ts
 ```
 
 ## Editing the mock content
 
-- **Groups, agent chats, files, todos and activity** live in `app/data/central-perk.ts`. Times are relative (`dayAt(1, "09:30")`, `minutesAgo(20)`, `daysFromNow(3)`), so the mock always looks recent. A thread entry with `consultedBy` is an agent answering another agent's question.
-- **Agent replies:** keywords go in `app/data/agent-scripts.ts`, the output content in `app/data/output-templates.ts`. In a reply, `{sender}` becomes an @mention of whoever asked and `{title}` the output title. A version can list `todos`; they're added when the agent posts that version. An intent's `consult` lists the agents it checks with first, and what each one says.
+- **Groups, agent chats, files, todos and activity** live in `app/data/central-perk.ts`. Times are relative (`dayAt(1, "09:30")`, `minutesAgo(20)`, `daysFromNow(3)`), so the mock always looks recent. A thread entry with `consultedBy` is an agent answering another agent's question. A thread entry's `files` attaches seeded files (by id) to the message.
+- **Agent replies:** keywords go in `app/data/agent-scripts.ts`, the output content in `app/data/output-templates.ts`. In a reply, `{sender}` becomes an @mention of whoever asked and `{title}` the output title. A template's `format` (`doc`, `sheet`, `slides` or `html`, a doc when left out) is what the artifact shows as in the conversation's Artifacts & files panel. A version can list `todos`; they're added when the agent posts that version. An intent's `consult` lists the agents it checks with first, and what each one says.
 - **A new agent:** add it to `app/data/agents.ts`, to the workspace's `agentIds` in `app/data/central-perk.ts`, and give it a script in `app/data/agent-scripts.ts`. Agents without an `icon` get an initials avatar.
 - **A new or changed agent icon:** run `python3 scripts/split-agent-eyes.py` (needs Pillow: `pip install pillow`). It paints over the icon's eyes to make a body, saves the eyes (and any loose part, like Airene's sparkle) as their own layers and records where they sit, so the agent's mascot can move on a new chat's greeting. An icon that hasn't been split shows there as a still picture.
 - **People avatars:** set `avatar` in `app/data/people.ts` to one of `public/images/avatars/avatar-01.webp` … `avatar-17.webp`.

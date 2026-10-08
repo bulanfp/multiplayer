@@ -8,8 +8,16 @@ export const FILE_TYPES: Record<LibraryFileType, { label: string; icon: IconName
   image: { label: "Image", icon: "file-image" },
   zip: { label: "ZIP archive", icon: "zip" },
   design: { label: "Figma file", icon: "image-document" },
-  document: { label: "Document", icon: "doc" }
+  document: { label: "Document", icon: "doc" },
+  spreadsheet: { label: "Spreadsheet", icon: "table-view-column" },
+  video: { label: "Video", icon: "file-video" }
 };
+
+/** A file's format as people know it from their own uploads: "PDF", "CSV", "MP4". */
+export function fileFormat(file: { name: string; type: LibraryFileType }): string {
+  const extension = file.name.includes(".") ? file.name.split(".").pop() : "";
+  return extension ? extension.toUpperCase() : FILE_TYPES[file.type].label;
+}
 
 /** Best guess from the name and the browser's type: "brief.pdf" → "pdf". */
 function fileTypeOf(name: string, mimeType: string): LibraryFileType {
@@ -18,6 +26,8 @@ function fileTypeOf(name: string, mimeType: string): LibraryFileType {
   if (mimeType.startsWith("image/")) return "image";
   if (["zip", "rar", "7z"].includes(extension)) return "zip";
   if (["fig", "sketch", "xd"].includes(extension)) return "design";
+  if (["csv", "xls", "xlsx", "numbers"].includes(extension)) return "spreadsheet";
+  if (mimeType.startsWith("video/")) return "video";
   return "document";
 }
 
